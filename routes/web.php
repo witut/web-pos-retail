@@ -96,11 +96,10 @@ Route::middleware(['auth', 'role:cashier,admin'])->prefix('pos')->name('pos.')->
 |--------------------------------------------------------------------------
 | Auth Routes
 |--------------------------------------------------------------------------
-| Laravel Breeze will add these routes
-| - login, register, password reset, etc.
 */
+use App\Http\Controllers\Auth\AuthController;
 
-// NOTE: Install Laravel Breeze for authentication:
-// composer require laravel/breeze --dev
-// php artisan breeze:install blade
-// npm install && npm run dev
+Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
+Route::post('/login', [AuthController::class, 'login']);
+Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
