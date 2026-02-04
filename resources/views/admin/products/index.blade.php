@@ -6,7 +6,7 @@
             <p class="text-gray-500">Kelola semua produk di toko Anda</p>
         </div>
         <a href="{{ route('admin.products.create') }}"
-            class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors">
+            class="inline-flex items-center px-4 py-2 bg-slate-700 hover:bg-slate-800 text-white font-medium rounded-lg transition-colors shadow-sm">
             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
             </svg>
@@ -100,9 +100,11 @@
                         </td>
                         <td class="px-6 py-4 text-gray-600">{{ $product->category->name ?? '-' }}</td>
                         <td class="px-6 py-4 text-right font-medium">Rp
-                            {{ number_format($product->selling_price, 0, ',', '.') }}</td>
+                            {{ number_format($product->selling_price, 0, ',', '.') }}
+                        </td>
                         <td class="px-6 py-4 text-right text-gray-600">Rp
-                            {{ number_format($product->cost_price, 0, ',', '.') }}</td>
+                            {{ number_format($product->cost_price, 0, ',', '.') }}
+                        </td>
                         <td class="px-6 py-4 text-right">
                             <span
                                 class="{{ $product->stock_on_hand <= $product->min_stock_alert ? 'text-red-600 font-bold' : 'text-gray-600' }}">
