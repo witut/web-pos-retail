@@ -137,7 +137,26 @@ class ProductController extends Controller
     {
         $product->load(['barcodes', 'units']);
         $categories = Category::all();
-        return view('admin.products.edit', compact('product', 'categories'));
+
+        // Prepare data for Alpine.js
+        $barcodesData = $product->barcodes->map(function ($b) {
+            return [
+                'id' => $b->id,
+                'code' => $b->barcode,
+                'is_primary' => $b->is_primary,
+            ];
+        })->values();
+
+        $unitsData = $product->units->map(function ($u) {
+            return [
+                'id' => $u->id,
+                'name' => $u->unit_name,
+                'conversion_rate' => $u->conversion_rate,
+                'selling_price' => $u->selling_price,
+            ];
+        })->values();
+
+        return view('admin.products.edit', compact('product', 'categories', 'barcodesData', 'unitsData'));
     }
 
     /**

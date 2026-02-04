@@ -326,21 +326,8 @@
         <script>
             function productEditForm() {
                 return {
-                    barcodes: @json($product->barcodes->map(function ($b) {
-                            return [
-                                'id' => $b->id,
-                                'code' => $b->barcode,
-                                'is_primary' => $b->is_primary,
-                            ];
-                        })),
-                    units: @json($product->units->map(function ($u) {
-                            return [
-                                'id' => $u->id,
-                                'name' => $u->unit_name,
-                                'conversion_rate' => $u->conversion_rate,
-                                'selling_price' => $u->selling_price,
-                            ];
-                        })),
+                    barcodes: @json($barcodesData),
+                    units: @json($unitsData),
                     imagePreview: null,
                     currentImage: '{{ $product->image_path ? asset('storage/' . $product->image_path) : '' }}',
 

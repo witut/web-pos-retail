@@ -10,20 +10,23 @@ class CategorySeeder extends Seeder
     /**
      * Run the database seeds.
      * 
-     * Seed sample categories dengan struktur hierarchical
+     * Seed categories with hierarchical structure:
+     * - Elektronik
+     *   - Laptop
+     *   - HP & Tablet
+     * - Fashion
+     *   - Pakaian Pria
+     *   - Pakaian Wanita
+     * - Makanan & Minuman
+     *   - Snack
+     *   - Minuman
      */
     public function run(): void
     {
-        // Parent categories
-        $electronics = Category::create([
+        // Parent Categories
+        $elektronik = Category::create([
             'name' => 'Elektronik',
             'description' => 'Produk elektronik dan gadget',
-            'parent_id' => null,
-        ]);
-
-        $food = Category::create([
-            'name' => 'Makanan & Minuman',
-            'description' => 'Produk makanan dan minuman',
             'parent_id' => null,
         ]);
 
@@ -33,80 +36,91 @@ class CategorySeeder extends Seeder
             'parent_id' => null,
         ]);
 
-        $home = Category::create([
-            'name' => 'Rumah Tangga',
-            'description' => 'Perlengkapan rumah tangga',
+        $makananMinuman = Category::create([
+            'name' => 'Makanan & Minuman',
+            'description' => 'Produk makanan dan minuman',
             'parent_id' => null,
         ]);
 
-        // Child categories - Elektronik
+        $alat = Category::create([
+            'name' => 'Alat Tulis',
+            'description' => 'Alat tulis kantor dan sekolah',
+            'parent_id' => null,
+        ]);
+
+        echo "✓ 4 Parent categories created\n";
+
+        // Child Categories - Elektronik
         Category::create([
-            'name' => 'Handphone',
-            'description' => 'Smartphone dan accessories',
-            'parent_id' => $electronics->id,
+            'name' => 'Laptop',
+            'description' => 'Laptop dan notebook',
+            'parent_id' => $elektronik->id,
         ]);
 
         Category::create([
-            'name' => 'Laptop & Komputer',
-            'description' => 'Laptop, PC, dan aksesoris',
-            'parent_id' => $electronics->id,
+            'name' => 'HP & Tablet',
+            'description' => 'Handphone dan tablet',
+            'parent_id' => $elektronik->id,
         ]);
 
         Category::create([
-            'name' => 'Audio & Video',
-            'description' => 'Speaker, headphone, TV',
-            'parent_id' => $electronics->id,
+            'name' => 'Aksesoris',
+            'description' => 'Aksesoris elektronik',
+            'parent_id' => $elektronik->id,
         ]);
 
-        // Child categories - Makanan & Minuman
-        Category::create([
-            'name' => 'Minuman',
-            'description' => 'Soft drink, juice, air mineral',
-            'parent_id' => $food->id,
-        ]);
-
-        Category::create([
-            'name' => 'Snack',
-            'description' => 'Keripik, kue, permen',
-            'parent_id' => $food->id,
-        ]);
-
-        Category::create([
-            'name' => 'Makanan Instan',
-            'description' => 'Mie instan, bumbu instan',
-            'parent_id' => $food->id,
-        ]);
-
-        // Child categories - Fashion
+        // Child Categories - Fashion
         Category::create([
             'name' => 'Pakaian Pria',
-            'description' => 'Kemeja, celana, jaket pria',
+            'description' => 'Pakaian untuk pria',
             'parent_id' => $fashion->id,
         ]);
 
         Category::create([
             'name' => 'Pakaian Wanita',
-            'description' => 'Blouse, rok, dress',
+            'description' => 'Pakaian untuk wanita',
             'parent_id' => $fashion->id,
         ]);
 
-        // Child categories - Rumah Tangga
         Category::create([
-            'name' => 'Alat Dapur',
-            'description' => 'Panci, wajan, pisau',
-            'parent_id' => $home->id,
+            'name' => 'Sepatu',
+            'description' => 'Sepatu pria dan wanita',
+            'parent_id' => $fashion->id,
+        ]);
+
+        // Child Categories - Makanan & Minuman
+        Category::create([
+            'name' => 'Snack',
+            'description' => 'Makanan ringan',
+            'parent_id' => $makananMinuman->id,
         ]);
 
         Category::create([
-            'name' => 'Pembersih',
-            'description' => 'Sabun cuci, detergen, pembersih lantai',
-            'parent_id' => $home->id,
+            'name' => 'Minuman',
+            'description' => 'Minuman kemasan',
+            'parent_id' => $makananMinuman->id,
         ]);
 
-        echo "✓ 14 categories created (4 parent + 10 child)\n";
-        echo "  - Elektronik (Handphone, Laptop, Audio)\n";
-        echo "  - Makanan & Minuman (Minuman, Snack, Instan)\n";
-        echo "  - Fashion (Pria, Wanita)\n";
-        echo "  - Rumah Tangga (Dapur, Pembersih)\n";
+        Category::create([
+            'name' => 'Makanan Berat',
+            'description' => 'Makanan instan dan berat',
+            'parent_id' => $makananMinuman->id,
+        ]);
+
+        // Child Categories - Alat Tulis
+        Category::create([
+            'name' => 'Buku',
+            'description' => 'Buku tulis dan catatan',
+            'parent_id' => $alat->id,
+        ]);
+
+        Category::create([
+            'name' => 'Pulpen & Pensil',
+            'description' => 'Alat tulis pulpen dan pensil',
+            'parent_id' => $alat->id,
+        ]);
+
+        echo "✓ 11 Child categories created\n";
+        echo "✓ Total: 15 categories with hierarchical structure\n";
     }
 }
