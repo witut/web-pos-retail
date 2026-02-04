@@ -1,0 +1,257 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Transaction;
+use App\Models\Product;
+use App\Models\StockMovement;
+use Illuminate\Support\Facades\DB;
+
+/**
+ * ReportService
+ * 
+ * Service untuk generate laporan dan analytics
+ * 
+ * FITUR:
+ * 1. Sales reports (daily, monthly, period)
+ * 2. Stock reports (kartu stok, stock value)
+ * 3. Profit reports
+ * 4. Top selling products
+ * 5. Cashier performance
+ */
+class ReportService
+{
+    /**
+     * Get sales report untuk periode tertentu
+     * 
+     * @param string $startDate
+     * @param string $endDate
+     * @param array $filters ['cashier_id' => int, 'payment_method' => string]
+     * @return array
+     */
+    public function getSalesReport(string $startDate, string $endDate, array $filters = []): array
+    {
+        $query = Transaction::betweenDates($startDate, $endDate)
+            ->completed()
+            ->with('items.product', 'cashier');
+
+        // Apply filters
+        if (isset($filters['cashier_id'])) {
+            $query->where('cashier_id', $filters['cashier_id']);
+        }
+
+        if (isset($filters['payment_method'])) {
+            $query->where('payment_method', $filters['payment_method']);
+        }
+
+        $transactions = $query->get();
+
+        // Calculate summary
+        $summary = [
+            'total_transactions' => $transactions->count(),
+            'total_sales' => $transactions->sum('total'),
+            'total_tax' => $transactions->sum('tax_amount'),
+            'total_items_sold' => $transactions->sum(function ($t) {
+                return $t->getTotalItems();
+            }),
+            'total_profit' => $transactions->sum(function ($t) {
+                return $t->getTotalProfit();
+            }),
+            'average_transaction' => $transactions->avg('total'),
+        ];
+
+        // Group by payment method
+        $byPaymentMethod = $transactions->groupBy('payment_method')->map(function ($group) {
+            return [
+                'count' => $group->count(),
+                'total' => $group->sum('total'),
+            ];
+        });
+
+        return [
+            'summary' => $summary,
+            'by_payment_method' => $byPaymentMethod,
+            'transactions' => $transactions,
+        ];
+    }
+
+    /**
+     * Get top selling products
+     * 
+     * @param string $startDate
+     * @param string $endDate
+     * @param int $limit
+     * @return \Illuminate\Support\Collection
+     */
+    public function getTopSellingProducts(string $startDate, string $endDate, int $limit = 10)
+    {
+        return DB::table('transaction_items')
+            ->join('products', 'transaction_items.product_id', '=', 'products.id')
+            ->join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
+            ->whereBetween('transactions.transaction_date', [$startDate, $endDate])
+            ->where('transactions.status', 'completed')
+            ->select(
+                'products.id',
+                'products.name',
+                'products.sku',
+                DB::raw('SUM(transaction_items.qty) as total_qty'),
+                DB::raw('SUM(transaction_items.subtotal) as total_sales'),
+                DB::raw('COUNT(DISTINCT transactions.id) as transaction_count'),
+                DB::raw('SUM(transaction_items.qty * (transaction_items.unit_price - transaction_items.cost_price)) as total_profit')
+            )
+            ->groupBy('products.id', 'products.name', 'products.sku')
+            ->orderByDesc('total_sales')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * Get stock value report
+     * Total nilai stok di gudang (stock_on_hand × cost_price)
+     * 
+     * @param int|null $categoryId Filter by category
+     * @return array
+     */
+    public function getStockValueReport(?int $categoryId = null): array
+    {
+        $query = Product::active()->with('category');
+
+        if ($categoryId) {
+            $query->where('category_id', $categoryId);
+        }
+
+        $products = $query->get();
+
+        $totalValue = $products->sum(function ($product) {
+            return $product->stock_on_hand * $product->cost_price;
+        });
+
+        $totalQty = $products->sum('stock_on_hand');
+
+        // Group by category
+        $byCategory = $products->groupBy('category.name')->map(function ($group) {
+            return [
+                'total_products' => $group->count(),
+                'total_qty' => $group->sum('stock_on_hand'),
+                'total_value' => $group->sum(function ($p) {
+                    return $p->stock_on_hand * $p->cost_price;
+                }),
+            ];
+        });
+
+        return [
+            'summary' => [
+                'total_products' => $products->count(),
+                'total_qty' => $totalQty,
+                'total_value' => $totalValue,
+            ],
+            'by_category' => $byCategory,
+            'products' => $products,
+        ];
+    }
+
+    /**
+     * Get cashier performance report
+     * 
+     * @param string $startDate
+     * @param string $endDate
+     * @return \Illuminate\Support\Collection
+     */
+    public function getCashierPerformance(string $startDate, string $endDate)
+    {
+        return DB::table('transactions')
+            ->join('users', 'transactions.cashier_id', '=', 'users.id')
+            ->whereBetween('transactions.transaction_date', [$startDate, $endDate])
+            ->where('transactions.status', 'completed')
+            ->select(
+                'users.id',
+                'users.name',
+                DB::raw('COUNT(*) as total_transactions'),
+                DB::raw('SUM(transactions.total) as total_sales'),
+                DB::raw('AVG(transactions.total) as avg_transaction'),
+                DB::raw('MIN(transactions.total) as min_transaction'),
+                DB::raw('MAX(transactions.total) as max_transaction')
+            )
+            ->groupBy('users.id', 'users.name')
+            ->orderByDesc('total_sales')
+            ->get();
+    }
+
+    /**
+     * Get profit report (detail per transaksi)
+     * 
+     * @param string $startDate
+     * @param string $endDate
+     * @return array
+     */
+    public function getProfitReport(string $startDate, string $endDate): array
+    {
+        $transactions = Transaction::betweenDates($startDate, $endDate)
+            ->completed()
+            ->with('items')
+            ->get();
+
+        $totalProfit = 0;
+        $totalSales = 0;
+
+        $details = $transactions->map(function ($transaction) use (&$totalProfit, &$totalSales) {
+            $profit = $transaction->getTotalProfit();
+            $totalProfit += $profit;
+            $totalSales += $transaction->total;
+
+            return [
+                'invoice_number' => $transaction->invoice_number,
+                'date' => $transaction->transaction_date,
+                'total' => $transaction->total,
+                'profit' => $profit,
+                'profit_margin' => $transaction->total > 0 ? ($profit / $transaction->total) * 100 : 0,
+            ];
+        });
+
+        return [
+            'summary' => [
+                'total_transactions' => $transactions->count(),
+                'total_sales' => $totalSales,
+                'total_profit' => $totalProfit,
+                'avg_profit_margin' => $totalSales > 0 ? ($totalProfit / $totalSales) * 100 : 0,
+            ],
+            'details' => $details,
+        ];
+    }
+
+    /**
+     * Get daily sales summary (untuk grafik)
+     * 
+     * @param string $startDate
+     * @param string $endDate
+     * @return \Illuminate\Support\Collection
+     */
+    public function getDailySalesSummary(string $startDate, string $endDate)
+    {
+        return Transaction::whereBetween('transaction_date', [$startDate, $endDate])
+            ->completed()
+            ->select(
+                DB::raw('DATE(transaction_date) as date'),
+                DB::raw('COUNT(*) as transaction_count'),
+                DB::raw('SUM(total) as total_sales'),
+                DB::raw('AVG(total) as avg_transaction')
+            )
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get();
+    }
+
+    /**
+     * Get low stock alert report
+     * 
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    public function getLowStockReport()
+    {
+        return Product::lowStock()
+            ->active()
+            ->with('category')
+            ->orderBy('stock_on_hand')
+            ->get();
+    }
+}
