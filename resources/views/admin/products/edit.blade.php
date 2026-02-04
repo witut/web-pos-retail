@@ -173,7 +173,7 @@
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-lg font-semibold text-gray-800">Barcode</h3>
                         <button type="button" @click="addBarcode()"
-                            class="px-3 py-1 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700">
+                            class="px-3 py-1 bg-slate-800 text-white text-sm rounded-lg hover:bg-slate-900">
                             + Tambah Barcode
                         </button>
                     </div>
@@ -215,7 +215,7 @@
                             <p class="text-sm text-gray-500">Satuan penjualan selain satuan dasar</p>
                         </div>
                         <button type="button" @click="addUnit()"
-                            class="px-3 py-1 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700">
+                            class="px-3 py-1 bg-slate-800 text-white text-sm rounded-lg hover:bg-slate-900">
                             + Tambah Unit
                         </button>
                     </div>
@@ -314,7 +314,7 @@
                         Batal
                     </a>
                     <button type="submit"
-                        class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+                        class="px-6 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-900 font-medium">
                         Update Produk
                     </button>
                 </div>

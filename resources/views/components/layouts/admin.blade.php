@@ -5,7 +5,7 @@
             <!-- Logo -->
             <div class="p-6 border-b border-slate-800">
                 <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                    <div class="w-10 h-10 bg-slate-800 rounded-lg flex items-center justify-center">
                         <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
@@ -132,7 +132,7 @@
                     <div x-data="{ open: false }" class="relative">
                         <button @click="open = !open" type="button"
                             class="flex items-center space-x-2 text-gray-700 hover:text-gray-900">
-                            <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                            <div class="w-8 h-8 bg-slate-800 rounded-full flex items-center justify-center">
                                 <span
                                     class="text-white font-medium text-sm">{{ substr(auth()->user()->name ?? 'A', 0, 1) }}</span>
                             </div>

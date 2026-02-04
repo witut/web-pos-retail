@@ -115,17 +115,17 @@
                 <label class="block text-sm font-medium text-gray-700 mb-2">Metode Pembayaran</label>
                 <div class="grid grid-cols-3 gap-2">
                     <button @click="paymentMethod = 'cash'"
-                        :class="paymentMethod === 'cash' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border border-gray-300'"
+                        :class="paymentMethod === 'cash' ? 'bg-slate-800 text-white' : 'bg-white text-gray-700 border border-gray-300'"
                         class="py-3 rounded-lg font-medium transition-colors">
                         Cash
                     </button>
                     <button @click="paymentMethod = 'debit_card'"
-                        :class="paymentMethod === 'debit_card' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border border-gray-300'"
+                        :class="paymentMethod === 'debit_card' ? 'bg-slate-800 text-white' : 'bg-white text-gray-700 border border-gray-300'"
                         class="py-3 rounded-lg font-medium transition-colors">
                         Debit
                     </button>
                     <button @click="paymentMethod = 'qris'"
-                        :class="paymentMethod === 'qris' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border border-gray-300'"
+                        :class="paymentMethod === 'qris' ? 'bg-slate-800 text-white' : 'bg-white text-gray-700 border border-gray-300'"
                         class="py-3 rounded-lg font-medium transition-colors">
                         QRIS
                     </button>
@@ -153,7 +153,7 @@
 
                 <div class="grid grid-cols-2 gap-3">
                     <button @click="showHistory = true"
-                        class="py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg">
+                        class="py-3 bg-slate-800 hover:bg-slate-900 text-white font-medium rounded-lg">
                         📋 Riwayat (F9)
                     </button>
                     <button @click="clearCart()" :disabled="cart.length === 0"
@@ -178,7 +178,7 @@
                 </p>
                 <div class="flex space-x-3">
                     <button @click="printReceipt()"
-                        class="flex-1 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700">
+                        class="flex-1 py-3 bg-slate-800 text-white font-medium rounded-lg hover:bg-slate-900">
                         🖨️ Cetak Struk
                     </button>
                     <button @click="showSuccess = false; resetTransaction()"
