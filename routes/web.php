@@ -59,8 +59,10 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     // Settings (placeholder for future)
     // Route::get('/settings', [SettingController::class, 'index'])->name('settings');
 
-    // Users management (placeholder for future)
-    // Route::resource('users', UserController::class);
+    // Users management
+    Route::resource('users', \App\Http\Controllers\Admin\UserController::class);
+    Route::post('users/{user}/reset-pin', [\App\Http\Controllers\Admin\UserController::class, 'resetPin'])->name('users.reset-pin');
+    Route::delete('users/{user}/remove-pin', [\App\Http\Controllers\Admin\UserController::class, 'removePin'])->name('users.remove-pin');
 });
 
 /*

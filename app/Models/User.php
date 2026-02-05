@@ -6,6 +6,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Hash;
 
 /**
  * User Model
@@ -21,7 +22,7 @@ use Illuminate\Notifications\Notifiable;
  * @property string $email
  * @property string $password
  * @property string $role (admin, cashier)
- * @property string|null $pin (6 digit PIN untuk admin override)
+ * @property string|null $pin (6 digit PIN untuk admin override, hashed)
  * @property string $status (active, inactive)
  */
 class User extends Authenticatable
@@ -64,6 +65,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'pin' => 'hashed',
         ];
     }
 
@@ -210,7 +212,10 @@ class User extends Authenticatable
      */
     public function verifyPin(string $pin): bool
     {
-        return $this->pin === $pin;
+        if (!$this->hasPin()) {
+            return false;
+        }
+        return Hash::check($pin, $this->pin);
     }
 
     /**

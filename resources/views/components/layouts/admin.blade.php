@@ -81,6 +81,21 @@
                     <span class="font-medium">Stock</span>
                 </a>
 
+                <!-- SETTINGS Group -->
+                <div class="mt-6 mb-3">
+                    <h3 class="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Pengaturan</h3>
+                </div>
+
+                <a href="{{ route('admin.users.index') }}"
+                    class="flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all
+                          {{ request()->routeIs('admin.users.*') ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white' }}">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                    <span class="font-medium">Manajemen User</span>
+                </a>
+
                 <!-- REPORTS Group -->
                 <div class="mt-6 mb-3">
                     <h3 class="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Laporan</h3>
