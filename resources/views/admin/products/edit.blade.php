@@ -105,8 +105,17 @@
                                 Satuan Dasar <span class="text-red-500">*</span>
                             </label>
                             <input type="text" name="base_unit" value="{{ old('base_unit', $product->base_unit) }}"
-                                required placeholder="pcs, kg, liter, dll"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 @error('base_unit') border-red-500 @enderror">
+                                required list="unitOptions" placeholder="Pilih atau ketik..."
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 @error('base_unit') border-red-500 @enderror">
+                            <datalist id="unitOptions">
+                                <option value="PCS">
+                                <option value="KG">
+                                <option value="Liter">
+                                <option value="Meter">
+                                <option value="Roll">
+                                <option value="Box">
+                                <option value="Paket">
+                            </datalist>
                             @error('base_unit')
                                 <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                             @enderror
