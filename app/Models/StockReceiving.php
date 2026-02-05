@@ -24,6 +24,8 @@ class StockReceiving extends Model
 {
     use HasFactory;
 
+    protected $table = 'stock_receiving';
+
     protected $fillable = [
         'receiving_number',
         'supplier_id',

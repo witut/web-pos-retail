@@ -26,6 +26,8 @@ class StockReceivingItem extends Model
 {
     use HasFactory;
 
+    protected $table = 'stock_receiving_items';
+
     protected $fillable = [
         'receiving_id',
         'product_id',
