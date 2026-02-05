@@ -5,30 +5,36 @@
             :class="sidebarOpen ? 'w-64' : 'w-20'">
 
             <!-- Logo & Toggle -->
-            <div class="p-4 border-b border-slate-800 flex items-center justify-between">
-                <div class="flex items-center space-x-3 overflow-hidden whitespace-nowrap">
+            <div class="p-4 border-b border-slate-800 flex items-center justify-between overflow-hidden">
+                <div class="flex items-center space-x-3 whitespace-nowrap min-w-0">
                     <div class="w-10 h-10 bg-slate-800 rounded-lg flex-shrink-0 flex items-center justify-center">
                         <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                         </svg>
                     </div>
-                    <div class="transition-opacity duration-300" :class="sidebarOpen ? 'opacity-100' : 'opacity-0 w-0'">
+                    <div class="transition-opacity duration-300"
+                        :class="sidebarOpen ? 'opacity-100' : 'opacity-0 w-0 hidden'">
                         <h1 class="text-lg font-bold text-white">POS Retail</h1>
                         <p class="text-xs text-slate-400">Admin Panel</p>
                     </div>
                 </div>
-                <!-- Toggle Button (Only visible when open, or handle placement logic) -->
+
+                <!-- Collapse Button (Visible only when Open) -->
+                <button @click="sidebarOpen = false" x-show="sidebarOpen"
+                    class="text-slate-400 hover:text-white transition-colors p-1 rounded-md hover:bg-slate-800">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
             </div>
 
-            <!-- Toggle Button Strip -->
-            <div class="flex justify-end px-2 py-2">
-                <button @click="sidebarOpen = !sidebarOpen"
-                    class="p-1 rounded-md hover:bg-slate-800 text-slate-400 hover:text-white transition-colors">
-                    <svg class="w-5 h-5 transition-transform duration-300" :class="!sidebarOpen ? 'rotate-180' : ''"
-                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+            <!-- Expand Button (Visible only when Closed) -->
+            <div class="w-full flex justify-center py-2" x-show="!sidebarOpen" style="display: none;">
+                <button @click="sidebarOpen = true"
+                    class="text-slate-400 hover:text-white p-1 rounded-md hover:bg-slate-800 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                     </svg>
                 </button>
             </div>
