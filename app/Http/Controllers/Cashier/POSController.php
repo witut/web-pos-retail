@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\Transaction;
 use App\Models\Setting;
+use App\Services\TransactionService;
 use Illuminate\Http\Request;
 
 /**
@@ -20,6 +21,13 @@ use Illuminate\Http\Request;
  */
 class POSController extends Controller
 {
+    protected TransactionService $transactionService;
+
+    public function __construct(TransactionService $transactionService)
+    {
+        $this->transactionService = $transactionService;
+    }
+
     /**
      * Display POS terminal screen
      * Main interface untuk cashier
@@ -145,19 +153,61 @@ class POSController extends Controller
 
     /**
      * Process checkout (Create transaction)
-     * Will be implemented with TransactionService
+     * Uses TransactionService for atomic checkout
      * 
      * @param Request $request
-     * @return \Illuminate\Http\RedirectResponse|\Illuminate\Http\JsonResponse
+     * @return \Illuminate\Http\JsonResponse
      */
     public function checkout(Request $request)
     {
-        // TODO: Implement with TransactionService
-        // For now, return placeholder
-        return response()->json([
-            'message' => 'Checkout akan diimplementasikan dengan TransactionService',
-            'status' => 'pending'
+        $validated = $request->validate([
+            'items' => 'required|array|min:1',
+            'items.*.product_id' => 'required|exists:products,id',
+            'items.*.qty' => 'required|numeric|min:0.01',
+            'items.*.price' => 'required|numeric|min:0',
+            'items.*.unit_name' => 'required|string|max:20',
+            'payment.method' => 'required|in:cash,card,qris,transfer',
+            'payment.amount_paid' => 'required|numeric|min:0',
         ]);
+
+        try {
+            // Prepare cart items for TransactionService
+            $cartItems = collect($validated['items'])->map(function ($item) {
+                return [
+                    'product_id' => $item['product_id'],
+                    'qty' => $item['qty'],
+                    'price' => $item['price'],
+                    'unit_name' => $item['unit_name'],
+                ];
+            })->toArray();
+
+            // Prepare payment data
+            $paymentData = [
+                'method' => $validated['payment']['method'],
+                'amount_paid' => $validated['payment']['amount_paid'],
+            ];
+
+            // Process transaction via service
+            $transaction = $this->transactionService->createTransaction(
+                $cartItems,
+                $paymentData,
+                auth()->id()
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Transaksi berhasil!',
+                'invoice_number' => $transaction->invoice_number,
+                'transaction_id' => $transaction->id,
+                'total' => $transaction->total,
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+            ], 400);
+        }
     }
 
     /**
