@@ -3,10 +3,13 @@
         <!-- Left Panel: Product Search & Cart -->
         <div class="flex-1 flex flex-col p-4 space-y-4">
             <!-- Search Bar -->
-            <div class="bg-white rounded-xl shadow-sm p-4">
+            <div class="bg-white rounded-xl shadow-sm p-4 relative">
                 <div class="flex space-x-3">
                     <div class="flex-1 relative">
-                        <input type="text" x-ref="searchInput" x-model="searchQuery" @keydown.enter="searchProduct()"
+                        <input type="text" x-ref="searchInput" x-model="searchQuery"
+                            @keydown.enter.prevent="handleSearchEnter()"
+                            @keydown.arrow-down.prevent="navigateAutocomplete(1)"
+                            @keydown.arrow-up.prevent="navigateAutocomplete(-1)" @keydown.escape="closeAutocomplete()"
                             @input.debounce.300ms="autocomplete()" placeholder="Scan barcode atau ketik nama produk..."
                             class="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 text-lg">
                         <svg class="w-6 h-6 absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" fill="none"
@@ -23,9 +26,10 @@
 
                 <!-- Autocomplete Dropdown -->
                 <div x-show="autocompleteResults.length > 0" x-cloak
-                    class="absolute z-50 w-full max-w-2xl mt-2 bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden">
+                    class="absolute left-4 right-4 z-50 mt-2 bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden">
                     <template x-for="(item, idx) in autocompleteResults" :key="item.id">
-                        <div @click="selectProduct(item)"
+                        <div @click="selectProductFromAutocomplete(idx)"
+                            :class="{ 'bg-slate-100': autocompleteIndex === idx }"
                             class="px-4 py-3 hover:bg-slate-50 cursor-pointer border-b border-gray-100 last:border-0">
                             <div class="flex justify-between items-center">
                                 <div>
@@ -35,7 +39,7 @@
                                 <div class="text-right">
                                     <span class="font-medium text-slate-700" x-text="formatCurrency(item.price)"></span>
                                     <span class="text-xs text-gray-500 ml-2">Stok: <span
-                                            x-text="item.stock"></span></span>
+                                            x-text="Math.floor(item.stock)"></span></span>
                                 </div>
                             </div>
                         </div>
@@ -70,7 +74,7 @@
                         </thead>
                         <tbody class="divide-y divide-gray-100">
                             <template x-for="(item, index) in cart" :key="item.id">
-                                <tr class="cart-item" :class="{ 'bg-blue-50': selectedIndex === index }">
+                                <tr class="cart-item" :class="{ 'bg-blue-50': selectedCartIndex === index }">
                                     <td class="px-4 py-3">
                                         <div class="font-medium text-gray-800" x-text="item.name"></div>
                                         <div class="text-xs text-gray-500" x-text="item.sku"></div>
@@ -122,12 +126,12 @@
         </div>
 
         <!-- Right Panel: Summary & Payment -->
-        <div class="w-96 bg-white shadow-lg flex flex-col">
-            <!-- Summary -->
-            <div class="flex-1 p-6 flex flex-col">
+        <div class="w-96 bg-white shadow-lg flex flex-col h-full overflow-hidden">
+            <!-- Summary - Scrollable -->
+            <div class="flex-1 p-6 overflow-y-auto">
                 <h3 class="text-lg font-semibold text-gray-800 mb-6">Ringkasan</h3>
 
-                <div class="space-y-4 flex-1">
+                <div class="space-y-3">
                     <div class="flex justify-between text-gray-600">
                         <span>Jumlah Item</span>
                         <span class="font-medium" x-text="totalItems + ' item'"></span>
@@ -140,7 +144,7 @@
                         <span>PPN ({{ $taxRate ?? 0 }}%)</span>
                         <span class="font-medium" x-text="formatCurrency(taxAmount)"></span>
                     </div>
-                    <div class="border-t-2 border-gray-200 pt-4">
+                    <div class="border-t-2 border-gray-200 pt-3">
                         <div class="flex justify-between text-xl font-bold text-gray-800">
                             <span>TOTAL</span>
                             <span class="text-slate-700" x-text="formatCurrency(grandTotal)"></span>
@@ -149,37 +153,37 @@
                 </div>
 
                 <!-- Quick Cash Buttons -->
-                <div class="mt-6 pt-6 border-t border-gray-200">
-                    <p class="text-sm text-gray-500 mb-3">Uang Diterima (Tunai)</p>
+                <div class="mt-4 pt-4 border-t border-gray-200">
+                    <p class="text-sm text-gray-500 mb-2">Uang Diterima (Tunai)</p>
                     <div class="grid grid-cols-3 gap-2">
                         <template x-for="amount in quickCashAmounts" :key="amount">
-                            <button @click="setAmountPaid(amount)"
-                                class="py-2 px-3 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-700 transition-colors"
+                            <button type="button" @click="setAmountPaid(amount)"
+                                class="py-2 px-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-xs font-medium text-gray-700 transition-colors"
                                 x-text="formatCurrency(amount)">
                             </button>
                         </template>
                     </div>
-                    <input type="number" x-model.number="amountPaid" placeholder="Atau ketik jumlah..."
-                        class="w-full mt-3 px-4 py-3 border border-gray-300 rounded-lg text-right text-lg font-medium focus:ring-2 focus:ring-slate-500">
+                    <input type="number" x-model.number="amountPaid" placeholder="Ketik jumlah..."
+                        class="w-full mt-2 px-3 py-2 border border-gray-300 rounded-lg text-right text-base font-medium focus:ring-2 focus:ring-slate-500">
                 </div>
 
                 <!-- Change -->
-                <div class="mt-4 p-4 rounded-lg" :class="change >= 0 ? 'bg-green-50' : 'bg-red-50'"
+                <div class="mt-3 p-3 rounded-lg" :class="change >= 0 ? 'bg-green-50' : 'bg-red-50'"
                     x-show="amountPaid > 0">
                     <div class="flex justify-between items-center">
-                        <span class="text-gray-600">Kembalian</span>
-                        <span class="text-2xl font-bold" :class="change >= 0 ? 'text-green-600' : 'text-red-600'"
+                        <span class="text-gray-600 text-sm">Kembalian</span>
+                        <span class="text-xl font-bold" :class="change >= 0 ? 'text-green-600' : 'text-red-600'"
                             x-text="formatCurrency(change)"></span>
                     </div>
                 </div>
             </div>
 
-            <!-- Payment Buttons -->
-            <div class="p-4 bg-gray-50 border-t border-gray-200 space-y-3">
-                <button @click="openPaymentModal()" :disabled="cart.length === 0"
-                    class="w-full py-4 bg-emerald-600 text-white text-lg font-bold rounded-xl hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+            <!-- Payment Buttons - Sticky Footer -->
+            <div class="flex-shrink-0 p-3 bg-gray-50 border-t border-gray-200 space-y-2">
+                <button type="button" @click="openPaymentModal()" :disabled="cart.length === 0"
+                    class="w-full py-3 bg-emerald-600 text-white text-base font-bold rounded-xl hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                     <span class="flex items-center justify-center">
-                        <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
                         </svg>
@@ -187,13 +191,13 @@
                     </span>
                 </button>
 
-                <div class="grid grid-cols-2 gap-3">
-                    <button @click="clearCart()"
-                        class="py-3 bg-red-100 text-red-700 font-medium rounded-lg hover:bg-red-200 transition-colors">
+                <div class="grid grid-cols-2 gap-2">
+                    <button type="button" @click.prevent="console.log('Batal clicked'); confirmClearCart()"
+                        class="py-2 bg-red-100 text-red-700 font-medium rounded-lg hover:bg-red-200 transition-colors cursor-pointer">
                         Batal (ESC)
                     </button>
                     <a href="{{ route('pos.history') }}"
-                        class="py-3 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 transition-colors text-center">
+                        class="py-2 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 transition-colors text-center">
                         Riwayat (F9)
                     </a>
                 </div>
@@ -202,7 +206,7 @@
 
         <!-- Payment Modal -->
         <div x-show="showPaymentModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-            @keydown.escape="closePaymentModal()">
+            @keydown.escape.prevent="closePaymentModal()">
             <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden"
                 @click.outside="closePaymentModal()">
                 <div class="px-6 py-4 bg-slate-800 text-white">
@@ -267,9 +271,11 @@
                         class="flex-1 py-3 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-colors">
                         Batal
                     </button>
-                    <button @click="processCheckout()" :disabled="paymentMethod === 'cash' && change < 0"
+                    <button @click="processCheckout()"
+                        :disabled="isProcessing || (paymentMethod === 'cash' && change < 0)"
                         class="flex-1 py-3 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                        Proses Pembayaran
+                        <span x-show="!isProcessing">Proses Pembayaran</span>
+                        <span x-show="isProcessing">Memproses...</span>
                     </button>
                 </div>
             </div>
@@ -299,6 +305,33 @@
                 </div>
             </div>
         </div>
+
+        <!-- Confirmation Modal (Custom) -->
+        <div x-show="showConfirmModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+            @keydown.escape.prevent="showConfirmModal = false">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
+                <div class="p-6 text-center">
+                    <div class="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
+                        <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-800 mb-2" x-text="confirmTitle"></h3>
+                    <p class="text-gray-500 mb-6" x-text="confirmMessage"></p>
+                    <div class="flex space-x-3">
+                        <button @click="showConfirmModal = false"
+                            class="flex-1 py-3 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-colors">
+                            Batal
+                        </button>
+                        <button @click="executeConfirmAction()"
+                            class="flex-1 py-3 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition-colors">
+                            Ya, Lanjutkan
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     @push('scripts')
@@ -309,45 +342,89 @@
                     searchQuery: '',
                     searchError: '',
                     autocompleteResults: [],
+                    autocompleteIndex: -1,
                     cart: [],
-                    selectedIndex: -1,
+                    selectedCartIndex: -1,
                     taxRate: {{ $taxRate ?? 0 }},
                     amountPaid: 0,
                     paymentMethod: 'cash',
                     showPaymentModal: false,
                     showSuccessModal: false,
+                    isProcessing: false,
                     lastInvoice: '',
                     lastTransactionId: null,
                     quickCashAmounts: [10000, 20000, 50000, 100000, 200000, 500000],
+                    
+                    // Custom Confirm Modal
+                    showConfirmModal: false,
+                    confirmTitle: '',
+                    confirmMessage: '',
+                    confirmAction: null,
 
                     // Initialize
                     initPOS() {
                         this.$refs.searchInput.focus();
                     },
 
-                    // Computed
+                    // Computed - menggunakan parseInt untuk memastikan nilai bulat
                     get totalItems() {
-                        return this.cart.reduce((sum, item) => sum + item.qty, 0);
+                        return this.cart.reduce((sum, item) => sum + parseInt(item.qty || 0), 0);
                     },
                     get subtotal() {
-                        return this.cart.reduce((sum, item) => sum + item.subtotal, 0);
+                        let total = this.cart.reduce((sum, item) => {
+                            const subtotal = parseInt(item.subtotal || 0);
+                            return sum + subtotal;
+                        }, 0);
+                        return Math.round(total);
                     },
                     get taxAmount() {
                         return Math.round(this.subtotal * (this.taxRate / 100));
                     },
                     get grandTotal() {
-                        return this.subtotal + this.taxAmount;
+                        return Math.round(this.subtotal + this.taxAmount);
                     },
                     get change() {
-                        return this.amountPaid - this.grandTotal;
+                        return Math.round(parseInt(this.amountPaid || 0) - this.grandTotal);
                     },
 
                     // Methods
+                    handleSearchEnter() {
+                        // Jika ada autocomplete dan ada item terpilih, pilih item tersebut
+                        if (this.autocompleteResults.length > 0 && this.autocompleteIndex >= 0) {
+                            this.selectProductFromAutocomplete(this.autocompleteIndex);
+                        } else if (this.autocompleteResults.length > 0) {
+                            // Jika ada hasil tapi tidak ada yang dipilih, pilih yang pertama
+                            this.selectProductFromAutocomplete(0);
+                        } else {
+                            // Jika tidak ada hasil, lakukan search barcode/SKU
+                            this.searchProduct();
+                        }
+                    },
+
+                    navigateAutocomplete(direction) {
+                        if (this.autocompleteResults.length === 0) return;
+
+                        this.autocompleteIndex += direction;
+
+                        // Wrap around
+                        if (this.autocompleteIndex < 0) {
+                            this.autocompleteIndex = this.autocompleteResults.length - 1;
+                        } else if (this.autocompleteIndex >= this.autocompleteResults.length) {
+                            this.autocompleteIndex = 0;
+                        }
+                    },
+
+                    closeAutocomplete() {
+                        this.autocompleteResults = [];
+                        this.autocompleteIndex = -1;
+                    },
+
                     async searchProduct() {
                         if (!this.searchQuery.trim()) return;
 
                         this.searchError = '';
                         this.autocompleteResults = [];
+                        this.autocompleteIndex = -1;
 
                         try {
                             const response = await fetch(`/pos/search-product?q=${encodeURIComponent(this.searchQuery)}`);
@@ -362,10 +439,13 @@
                             this.searchQuery = '';
                         } catch (error) {
                             this.searchError = 'Gagal mencari produk';
+                            console.error(error);
                         }
                     },
 
                     async autocomplete() {
+                        this.autocompleteIndex = -1;
+
                         if (this.searchQuery.length < 2) {
                             this.autocompleteResults = [];
                             return;
@@ -379,25 +459,33 @@
                         }
                     },
 
-                    selectProduct(item) {
+                    selectProductFromAutocomplete(index) {
+                        const item = this.autocompleteResults[index];
+                        if (!item) return;
+
                         this.addToCart({
                             id: item.id,
                             sku: item.sku,
                             name: item.name,
-                            selling_price: item.price,
-                            stock_on_hand: item.stock,
+                            selling_price: parseInt(item.price) || 0,
+                            stock_on_hand: parseInt(item.stock) || 0,
                             base_unit: 'pcs'
                         });
                         this.searchQuery = '';
                         this.autocompleteResults = [];
+                        this.autocompleteIndex = -1;
+                        this.$refs.searchInput.focus();
                     },
 
                     addToCart(product) {
+                        const price = parseInt(product.selling_price) || 0;
+                        const stock = parseInt(product.stock_on_hand) || 0;
+
                         const existing = this.cart.find(item => item.id === product.id);
                         if (existing) {
-                            if (existing.qty < product.stock_on_hand) {
+                            if (existing.qty < stock) {
                                 existing.qty++;
-                                existing.subtotal = existing.qty * existing.price;
+                                existing.subtotal = Math.round(existing.qty * existing.price);
                             } else {
                                 this.searchError = 'Stok tidak mencukupi';
                             }
@@ -406,11 +494,11 @@
                                 id: product.id,
                                 sku: product.sku,
                                 name: product.name,
-                                price: product.selling_price,
+                                price: price,
                                 qty: 1,
-                                subtotal: product.selling_price,
-                                stock: product.stock_on_hand,
-                                unit: product.base_unit
+                                subtotal: price,
+                                stock: stock,
+                                unit: product.base_unit || 'pcs'
                             });
                         }
                         this.$refs.searchInput.focus();
@@ -434,22 +522,56 @@
 
                     updateSubtotal(index) {
                         const item = this.cart[index];
-                        item.subtotal = item.qty * item.price;
+                        item.subtotal = Math.round(item.qty * item.price);
                     },
 
                     removeItem(index) {
                         this.cart.splice(index, 1);
                     },
 
-                    clearCart() {
-                        if (confirm('Yakin ingin mengosongkan keranjang?')) {
-                            this.cart = [];
-                            this.amountPaid = 0;
+                    // Custom confirmation modal helper
+                    showConfirm(title, message, action) {
+                        this.confirmTitle = title;
+                        this.confirmMessage = message;
+                        this.confirmAction = action;
+                        this.showConfirmModal = true;
+                    },
+
+                    executeConfirmAction() {
+                        if (this.confirmAction) {
+                            this.confirmAction();
                         }
+                        this.showConfirmModal = false;
+                        this.confirmAction = null;
+                    },
+
+                    confirmClearCart() {
+                        console.log('confirmClearCart called, cart length:', this.cart.length);
+                        if (this.cart.length === 0) {
+                            // Show empty cart message with custom modal
+                            this.showConfirm(
+                                'Keranjang Kosong',
+                                'Tidak ada item di keranjang.',
+                                () => {}
+                            );
+                            return;
+                        }
+                        
+                        // Show confirmation modal for clearing cart
+                        this.showConfirm(
+                            'Kosongkan Keranjang?',
+                            'Semua item di keranjang akan dihapus. Lanjutkan?',
+                            () => {
+                                this.cart = [];
+                                this.amountPaid = 0;
+                                this.searchError = '';
+                                this.$refs.searchInput.focus();
+                            }
+                        );
                     },
 
                     setAmountPaid(amount) {
-                        this.amountPaid = amount;
+                        this.amountPaid = parseInt(amount) || 0;
                     },
 
                     openPaymentModal() {
@@ -470,41 +592,56 @@
                             return;
                         }
 
+                        if (this.isProcessing) return;
+                        this.isProcessing = true;
+
                         try {
+                            const payload = {
+                                items: this.cart.map(item => ({
+                                    product_id: item.id,
+                                    qty: parseInt(item.qty),
+                                    price: parseInt(item.price),
+                                    unit_name: item.unit || 'pcs'
+                                })),
+                                payment: {
+                                    method: this.paymentMethod,
+                                    amount_paid: this.paymentMethod === 'cash'
+                                        ? parseInt(this.amountPaid)
+                                        : this.grandTotal
+                                }
+                            };
+
+                            console.log('Sending checkout:', payload);
+
                             const response = await fetch('/pos/checkout', {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json',
-                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                                    'Accept': 'application/json'
                                 },
-                                body: JSON.stringify({
-                                    items: this.cart.map(item => ({
-                                        product_id: item.id,
-                                        qty: item.qty,
-                                        price: item.price,
-                                        unit_name: item.unit
-                                    })),
-                                    payment: {
-                                        method: this.paymentMethod,
-                                        amount_paid: this.paymentMethod === 'cash' ? this.amountPaid : this.grandTotal
-                                    }
-                                })
+                                body: JSON.stringify(payload)
                             });
 
                             const data = await response.json();
+                            console.log('Checkout response:', data);
 
-                            if (!response.ok) {
-                                alert(data.error || 'Gagal memproses pembayaran');
+                            if (!response.ok || data.success === false) {
+                                alert(data.error || data.message || 'Gagal memproses pembayaran');
+                                this.isProcessing = false;
                                 return;
                             }
 
-                            this.lastInvoice = data.invoice_number || 'INV/2026/02/00001';
+                            this.lastInvoice = data.invoice_number || 'INV-TEMP';
                             this.lastTransactionId = data.transaction_id;
                             this.showPaymentModal = false;
                             this.showSuccessModal = true;
 
                         } catch (error) {
-                            alert('Terjadi kesalahan');
+                            console.error('Checkout error:', error);
+                            alert('Terjadi kesalahan: ' + error.message);
+                        } finally {
+                            this.isProcessing = false;
                         }
                     },
 
@@ -538,24 +675,33 @@
                             event.preventDefault();
                             window.location.href = '/pos/history';
                         }
-                        // ESC - Cancel/Close
+                        // ESC - Cancel/Close modals or clear cart
                         if (event.key === 'Escape') {
+                            event.preventDefault();
                             if (this.showPaymentModal) {
                                 this.closePaymentModal();
                             } else if (this.showSuccessModal) {
                                 this.newTransaction();
+                            } else if (this.autocompleteResults.length > 0) {
+                                this.closeAutocomplete();
+                            } else if (this.cart.length > 0) {
+                                this.confirmClearCart();
                             }
                         }
                         // DEL - Remove selected item
-                        if (event.key === 'Delete' && this.selectedIndex >= 0) {
+                        if (event.key === 'Delete' && this.selectedCartIndex >= 0) {
                             event.preventDefault();
-                            this.removeItem(this.selectedIndex);
-                            this.selectedIndex = -1;
+                            this.removeItem(this.selectedCartIndex);
+                            this.selectedCartIndex = -1;
                         }
                     },
 
                     formatCurrency(value) {
-                        return 'Rp ' + new Intl.NumberFormat('id-ID').format(value || 0);
+                        const num = parseInt(value) || 0;
+                        return 'Rp ' + new Intl.NumberFormat('id-ID', {
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0
+                        }).format(num);
                     }
                 }
             }

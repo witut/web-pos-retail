@@ -7,7 +7,8 @@
                 <div>
                     <p class="text-sm font-medium text-gray-500">Penjualan Hari Ini</p>
                     <p class="text-2xl font-bold text-gray-900 mt-1">Rp
-                        {{ number_format($todaySales ?? 0, 0, ',', '.') }}</p>
+                        {{ number_format($todaySales ?? 0, 0, ',', '.') }}
+                    </p>
                 </div>
                 <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
                     <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -25,7 +26,8 @@
                 <div>
                     <p class="text-sm font-medium text-gray-500">Penjualan Bulan Ini</p>
                     <p class="text-2xl font-bold text-gray-900 mt-1">Rp
-                        {{ number_format($monthlySales ?? 0, 0, ',', '.') }}</p>
+                        {{ number_format($monthlySales ?? 0, 0, ',', '.') }}
+                    </p>
                 </div>
                 <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
                     <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -61,7 +63,8 @@
                     <p class="text-sm font-medium text-gray-500">Stok Menipis</p>
                     <p
                         class="text-2xl font-bold {{ ($lowStockCount ?? 0) > 0 ? 'text-red-600' : 'text-gray-900' }} mt-1">
-                        {{ $lowStockCount ?? 0 }}</p>
+                        {{ $lowStockCount ?? 0 }}
+                    </p>
                 </div>
                 <div
                     class="w-12 h-12 {{ ($lowStockCount ?? 0) > 0 ? 'bg-red-100' : 'bg-gray-100' }} rounded-full flex items-center justify-center">
@@ -122,9 +125,11 @@
                                     <p class="text-xs text-gray-500">{{ $product->sku }}</p>
                                 </td>
                                 <td class="py-3 text-right font-medium">
-                                    {{ number_format($product->total_qty, 0, ',', '.') }}</td>
+                                    {{ number_format($product->total_qty, 0, ',', '.') }}
+                                </td>
                                 <td class="py-3 text-right font-medium text-green-600">Rp
-                                    {{ number_format($product->total_sales, 0, ',', '.') }}</td>
+                                    {{ number_format($product->total_sales, 0, ',', '.') }}
+                                </td>
                             </tr>
                         @empty
                             <tr>

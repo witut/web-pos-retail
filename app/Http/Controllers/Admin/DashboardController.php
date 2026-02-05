@@ -62,10 +62,11 @@ class DashboardController extends Controller
             ->where('transactions.status', 'completed')
             ->select(
                 'products.name',
+                'products.sku',
                 DB::raw('SUM(transaction_items.qty) as total_qty'),
                 DB::raw('SUM(transaction_items.subtotal) as total_sales')
             )
-            ->groupBy('products.id', 'products.name')
+            ->groupBy('products.id', 'products.name', 'products.sku')
             ->orderByDesc('total_sales')
             ->limit(5)
             ->get();
