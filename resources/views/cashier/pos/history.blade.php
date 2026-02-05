@@ -1,5 +1,5 @@
 <x-layouts.pos :title="'Riwayat Transaksi'">
-    <div class="h-full p-6 overflow-y-auto">
+    <div class="h-full p-6 overflow-y-auto" x-data="voidTransaction()">
         <div class="max-w-6xl mx-auto">
             <!-- Header -->
             <div class="flex items-center justify-between mb-6">
@@ -16,6 +16,14 @@
                     Kembali ke POS
                 </a>
             </div>
+
+            <!-- Success/Error Messages -->
+            <template x-if="successMessage">
+                <div class="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700" x-text="successMessage"></div>
+            </template>
+            <template x-if="errorMessage">
+                <div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700" x-text="errorMessage"></div>
+            </template>
 
             <!-- Transactions Table -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -131,6 +139,19 @@
                                                             d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
                                                     </svg>
                                                 </a>
+                                                @if ($trx->status === 'completed')
+                                                    <button type="button"
+                                                        @click="openVoidModal({{ $trx->id }}, '{{ $trx->invoice_number }}')"
+                                                        class="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                                                        title="Void">
+                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor"
+                                                            viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2"
+                                                                d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                                                        </svg>
+                                                    </button>
+                                                @endif
                                             </div>
                                         </td>
                                     </tr>
@@ -146,5 +167,178 @@
                 @endif
             </div>
         </div>
+
+        <!-- Void Modal -->
+        <div x-show="showVoidModal" x-cloak
+            class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="transition ease-in duration-150"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0">
+            <div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4" @click.outside="closeVoidModal()">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900">Void Transaksi</h3>
+                        <button @click="closeVoidModal()" class="text-gray-400 hover:text-gray-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                        <p class="text-sm text-red-700">
+                            <strong>Perhatian!</strong> Void akan membatalkan transaksi 
+                            <span class="font-mono font-medium" x-text="voidInvoice"></span> 
+                            dan mengembalikan stok.
+                        </p>
+                    </div>
+
+                    <form @submit.prevent="processVoid()">
+                        <!-- Admin PIN -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">PIN Admin</label>
+                            <input type="password" x-model="adminPin" maxlength="6" pattern="\d{6}"
+                                class="w-full px-4 py-3 text-center text-2xl tracking-widest border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                                placeholder="● ● ● ● ● ●" required autofocus>
+                        </div>
+
+                        <!-- Void Reason -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Alasan Void</label>
+                            <select x-model="voidReason" required
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500">
+                                <option value="">Pilih alasan...</option>
+                                <option value="Kesalahan input">Kesalahan input</option>
+                                <option value="Pelanggan batal">Pelanggan batal</option>
+                                <option value="Pembayaran gagal">Pembayaran gagal</option>
+                                <option value="Produk rusak/cacat">Produk rusak/cacat</option>
+                                <option value="Lainnya">Lainnya</option>
+                            </select>
+                        </div>
+
+                        <!-- Void Notes -->
+                        <div class="mb-6">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Catatan (opsional)</label>
+                            <textarea x-model="voidNotes" rows="2"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                                placeholder="Keterangan tambahan..."></textarea>
+                        </div>
+
+                        <!-- Error Message -->
+                        <template x-if="voidError">
+                            <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm" x-text="voidError"></div>
+                        </template>
+
+                        <!-- Buttons -->
+                        <div class="flex space-x-3">
+                            <button type="button" @click="closeVoidModal()"
+                                class="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">
+                                Batal
+                            </button>
+                            <button type="submit" :disabled="isProcessing"
+                                class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50">
+                                <span x-show="!isProcessing">Void Transaksi</span>
+                                <span x-show="isProcessing">Memproses...</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
+
+    @push('scripts')
+        <script>
+            function voidTransaction() {
+                return {
+                    showVoidModal: false,
+                    voidTransactionId: null,
+                    voidInvoice: '',
+                    adminPin: '',
+                    voidReason: '',
+                    voidNotes: '',
+                    voidError: '',
+                    isProcessing: false,
+                    successMessage: '',
+                    errorMessage: '',
+
+                    openVoidModal(transactionId, invoiceNumber) {
+                        this.voidTransactionId = transactionId;
+                        this.voidInvoice = invoiceNumber;
+                        this.adminPin = '';
+                        this.voidReason = '';
+                        this.voidNotes = '';
+                        this.voidError = '';
+                        this.showVoidModal = true;
+                    },
+
+                    closeVoidModal() {
+                        this.showVoidModal = false;
+                        this.voidTransactionId = null;
+                        this.voidInvoice = '';
+                        this.adminPin = '';
+                        this.voidReason = '';
+                        this.voidNotes = '';
+                        this.voidError = '';
+                    },
+
+                    async processVoid() {
+                        if (!this.adminPin || this.adminPin.length !== 6) {
+                            this.voidError = 'PIN harus 6 digit';
+                            return;
+                        }
+
+                        if (!this.voidReason) {
+                            this.voidError = 'Pilih alasan void';
+                            return;
+                        }
+
+                        this.isProcessing = true;
+                        this.voidError = '';
+
+                        try {
+                            const response = await fetch(`/pos/transaction/${this.voidTransactionId}/void`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                                    'Accept': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    admin_pin: this.adminPin,
+                                    void_reason: this.voidReason,
+                                    void_notes: this.voidNotes
+                                })
+                            });
+
+                            const data = await response.json();
+
+                            if (!response.ok || data.success === false) {
+                                this.voidError = data.error || 'Gagal memproses void';
+                                return;
+                            }
+
+                            // Success - reload page to show updated status
+                            this.successMessage = `Transaksi ${this.voidInvoice} berhasil di-void`;
+                            this.closeVoidModal();
+                            
+                            // Reload after short delay
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 1500);
+
+                        } catch (error) {
+                            console.error('Void error:', error);
+                            this.voidError = 'Terjadi kesalahan: ' + error.message;
+                        } finally {
+                            this.isProcessing = false;
+                        }
+                    }
+                }
+            }
+        </script>
+    @endpush
 </x-layouts.pos>
