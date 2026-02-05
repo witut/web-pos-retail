@@ -57,6 +57,7 @@ class ProductController extends Controller
      */
     public function store(Request $request)
     {
+        // dd($request->barcodes);
         $validated = $request->validate([
             'name' => 'required|string|max:200',
             'sku' => 'nullable|string|max:20|unique:products,sku',
@@ -164,6 +165,19 @@ class ProductController extends Controller
      */
     public function update(Request $request, Product $product)
     {
+        // // dd($request->barcodes);
+        // if ($request->barcodes) {
+        //     foreach ($request->barcodes as $barcodeData) {
+        //         var_dump(isset($barcodeData['is_primary']) ?? false);
+        //         print_r('---');
+        //         // ProductBarcode::create([
+        //         //     'product_id' => $product->id,
+        //         //     'barcode' => $barcodeData['code'],
+        //         //     'is_primary' => $barcodeData['is_primary'] ?? false,
+        //         // ]);
+        //     }
+        //     die();
+        // }
         $validated = $request->validate([
             'name' => 'required|string|max:200',
             'sku' => 'required|string|max:20|unique:products,sku,' . $product->id,
@@ -202,7 +216,7 @@ class ProductController extends Controller
                     ProductBarcode::create([
                         'product_id' => $product->id,
                         'barcode' => $barcodeData['code'],
-                        'is_primary' => $barcodeData['is_primary'] ?? false,
+                        'is_primary' => isset($barcodeData['is_primary']) ?? false,
                     ]);
                 }
             }

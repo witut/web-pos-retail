@@ -92,6 +92,9 @@ Route::middleware(['auth', 'role:cashier,admin'])->prefix('pos')->name('pos.')->
 
     // Void transaction (requires Admin PIN in controller)
     Route::post('/transaction/{transaction}/void', [POSController::class, 'void'])->name('transaction.void');
+
+    // Verify Admin PIN (AJAX)
+    Route::post('/verify-pin', [POSController::class, 'verifyPin'])->name('verify-pin');
 });
 
 /*

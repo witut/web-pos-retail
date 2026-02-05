@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\Transaction;
 use App\Models\Setting;
+use App\Models\User;
 use App\Services\TransactionService;
 use Illuminate\Http\Request;
 
@@ -262,7 +263,6 @@ class POSController extends Controller
 
     /**
      * Void transaction (requires Admin PIN)
-     * Will be implemented with TransactionService
      * 
      * @param Request $request
      * @param Transaction $transaction
@@ -270,15 +270,84 @@ class POSController extends Controller
      */
     public function void(Request $request, Transaction $transaction)
     {
-        // TODO: Implement with TransactionService
-        // - Verify Admin PIN
-        // - Check void time limit
-        // - Restore stock
-        // - Create audit log
+        try {
+            $validated = $request->validate([
+                'admin_pin' => 'required|string|digits:6',
+                'void_reason' => 'required|string|max:100',
+                'void_notes' => 'nullable|string|max:500',
+            ]);
+
+            // Find admin with valid PIN - check all admins
+            $admins = User::admins()->active()->get();
+            $validAdmin = null;
+
+            foreach ($admins as $admin) {
+                if ($admin->hasPin() && $admin->verifyPin($validated['admin_pin'])) {
+                    $validAdmin = $admin;
+                    break;
+                }
+            }
+
+            if (!$validAdmin) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'PIN admin tidak valid'
+                ], 422);
+            }
+
+            $voidedTransaction = $this->transactionService->voidTransaction(
+                $transaction,
+                $validated['admin_pin'],
+                $validated['void_reason'],
+                $validated['void_notes'] ?? null,
+                $validAdmin->id
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Transaksi berhasil di-void',
+                'transaction' => [
+                    'invoice_number' => $voidedTransaction->invoice_number,
+                    'status' => $voidedTransaction->status,
+                    'voided_at' => $voidedTransaction->voided_at->format('d/m/Y H:i')
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 422);
+        }
+    }
+
+    /**
+     * Verify Admin PIN (AJAX)
+     * Used for quick PIN validation before void
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function verifyPin(Request $request)
+    {
+        $request->validate([
+            'pin' => 'required|string|digits:6'
+        ]);
+
+        $admins = User::admins()->active()->get();
+
+        foreach ($admins as $admin) {
+            if ($admin->hasPin() && $admin->verifyPin($request->pin)) {
+                return response()->json([
+                    'valid' => true,
+                    'admin_name' => $admin->name
+                ]);
+            }
+        }
 
         return response()->json([
-            'message' => 'Void akan diimplementasikan dengan TransactionService',
-            'status' => 'pending'
-        ]);
+            'valid' => false,
+            'error' => 'PIN tidak valid'
+        ], 422);
     }
 }

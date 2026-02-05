@@ -354,16 +354,71 @@
                     lastInvoice: '',
                     lastTransactionId: null,
                     quickCashAmounts: [10000, 20000, 50000, 100000, 200000, 500000],
-                    
+
                     // Custom Confirm Modal
                     showConfirmModal: false,
                     confirmTitle: '',
                     confirmMessage: '',
                     confirmAction: null,
 
+                    // localStorage key for cart persistence
+                    storageKey: 'pos_cart_data',
+
                     // Initialize
                     initPOS() {
+                        // Load cart from localStorage
+                        this.loadCartFromStorage();
+
+                        // Watch cart changes and save to localStorage
+                        this.$watch('cart', (value) => {
+                            this.saveCartToStorage();
+                        }, { deep: true });
+
                         this.$refs.searchInput.focus();
+                    },
+
+                    // localStorage methods
+                    saveCartToStorage() {
+                        try {
+                            const data = {
+                                cart: this.cart,
+                                amountPaid: this.amountPaid,
+                                paymentMethod: this.paymentMethod,
+                                savedAt: new Date().toISOString()
+                            };
+                            localStorage.setItem(this.storageKey, JSON.stringify(data));
+                        } catch (e) {
+                            console.warn('Failed to save cart to localStorage:', e);
+                        }
+                    },
+
+                    loadCartFromStorage() {
+                        try {
+                            const stored = localStorage.getItem(this.storageKey);
+                            if (stored) {
+                                const data = JSON.parse(stored);
+                                // Only restore if saved within last 24 hours
+                                const savedAt = new Date(data.savedAt);
+                                const hoursSinceSave = (Date.now() - savedAt.getTime()) / (1000 * 60 * 60);
+
+                                if (hoursSinceSave < 24 && data.cart && data.cart.length > 0) {
+                                    this.cart = data.cart;
+                                    this.amountPaid = data.amountPaid || 0;
+                                    this.paymentMethod = data.paymentMethod || 'cash';
+                                    console.log('Cart restored from localStorage:', this.cart.length, 'items');
+                                }
+                            }
+                        } catch (e) {
+                            console.warn('Failed to load cart from localStorage:', e);
+                        }
+                    },
+
+                    clearCartStorage() {
+                        try {
+                            localStorage.removeItem(this.storageKey);
+                        } catch (e) {
+                            console.warn('Failed to clear cart from localStorage:', e);
+                        }
                     },
 
                     // Computed - menggunakan parseInt untuk memastikan nilai bulat
@@ -552,11 +607,11 @@
                             this.showConfirm(
                                 'Keranjang Kosong',
                                 'Tidak ada item di keranjang.',
-                                () => {}
+                                () => { }
                             );
                             return;
                         }
-                        
+
                         // Show confirmation modal for clearing cart
                         this.showConfirm(
                             'Kosongkan Keranjang?',
@@ -565,6 +620,7 @@
                                 this.cart = [];
                                 this.amountPaid = 0;
                                 this.searchError = '';
+                                this.clearCartStorage(); // Clear localStorage too
                                 this.$refs.searchInput.focus();
                             }
                         );
@@ -656,6 +712,7 @@
                         this.amountPaid = 0;
                         this.paymentMethod = 'cash';
                         this.showSuccessModal = false;
+                        this.clearCartStorage(); // Clear localStorage after checkout
                         this.$refs.searchInput.focus();
                     },
 
