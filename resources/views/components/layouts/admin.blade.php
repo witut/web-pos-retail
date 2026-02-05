@@ -1,124 +1,169 @@
 <x-layouts.app :title="$title ?? 'Admin'">
-    <div class="min-h-screen flex">
+    <div class="h-screen flex overflow-hidden bg-gray-50" x-data="{ sidebarOpen: true }">
         <!-- Sidebar -->
-        <aside class="w-64 bg-slate-900 text-white flex-shrink-0 flex flex-col">
-            <!-- Logo -->
-            <div class="p-6 border-b border-slate-800">
-                <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 bg-slate-800 rounded-lg flex items-center justify-center">
+        <aside class="bg-slate-900 text-white flex-shrink-0 flex flex-col transition-all duration-300 ease-in-out"
+            :class="sidebarOpen ? 'w-64' : 'w-20'">
+
+            <!-- Logo & Toggle -->
+            <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+                <div class="flex items-center space-x-3 overflow-hidden whitespace-nowrap">
+                    <div class="w-10 h-10 bg-slate-800 rounded-lg flex-shrink-0 flex items-center justify-center">
                         <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                         </svg>
                     </div>
-                    <div>
+                    <div class="transition-opacity duration-300" :class="sidebarOpen ? 'opacity-100' : 'opacity-0 w-0'">
                         <h1 class="text-lg font-bold text-white">POS Retail</h1>
                         <p class="text-xs text-slate-400">Admin Panel</p>
                     </div>
                 </div>
+                <!-- Toggle Button (Only visible when open, or handle placement logic) -->
+            </div>
+
+            <!-- Toggle Button Strip -->
+            <div class="flex justify-end px-2 py-2">
+                <button @click="sidebarOpen = !sidebarOpen"
+                    class="p-1 rounded-md hover:bg-slate-800 text-slate-400 hover:text-white transition-colors">
+                    <svg class="w-5 h-5 transition-transform duration-300" :class="!sidebarOpen ? 'rotate-180' : ''"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                    </svg>
+                </button>
             </div>
 
             <!-- Navigation -->
-            <nav class="flex-1 overflow-y-auto px-3 py-6">
+            <nav class="flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 space-y-1">
                 <!-- Dashboard -->
                 <a href="{{ route('admin.dashboard') }}"
-                    class="flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all
-                          {{ request()->routeIs('admin.dashboard') ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white' }}">
-                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    class="flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all group whitespace-nowrap
+                          {{ request()->routeIs('admin.dashboard') ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white' }}"
+                    title="Dashboard">
+                    <svg class="w-5 h-5 flex-shrink-0 transition-colors" :class="sidebarOpen ? 'mr-3' : 'mr-0 mx-auto'"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                     </svg>
-                    <span class="font-medium">Dashboard</span>
+                    <span class="font-medium transition-opacity duration-300"
+                        :class="sidebarOpen ? 'opacity-100' : 'opacity-0 hidden'">Dashboard</span>
                 </a>
 
                 <!-- MASTER DATA Group -->
-                <div class="mt-6 mb-3">
-                    <h3 class="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Master Data</h3>
+                <div class="mt-6 mb-3 transition-opacity duration-300"
+                    :class="sidebarOpen ? 'px-3 opacity-100' : 'px-0 opacity-0 hidden'">
+                    <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Master Data</h3>
                 </div>
+                <div class="my-3 border-t border-slate-800" :class="!sidebarOpen ? 'block' : 'hidden'"></div>
 
                 <a href="{{ route('admin.products.index') }}"
-                    class="flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all
-                          {{ request()->routeIs('admin.products.*') ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white' }}">
-                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    class="flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all group whitespace-nowrap
+                          {{ request()->routeIs('admin.products.*') ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white' }}"
+                    title="Produk">
+                    <svg class="w-5 h-5 flex-shrink-0 transition-colors" :class="sidebarOpen ? 'mr-3' : 'mr-0 mx-auto'"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                     </svg>
-                    <span class="font-medium">Produk</span>
+                    <span class="font-medium transition-opacity duration-300"
+                        :class="sidebarOpen ? 'opacity-100' : 'opacity-0 hidden'">Produk</span>
                 </a>
 
                 <a href="{{ route('admin.categories.index') }}"
-                    class="flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all
-                          {{ request()->routeIs('admin.categories.*') ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white' }}">
-                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    class="flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all group whitespace-nowrap
+                          {{ request()->routeIs('admin.categories.*') ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white' }}"
+                    title="Kategori">
+                    <svg class="w-5 h-5 flex-shrink-0 transition-colors" :class="sidebarOpen ? 'mr-3' : 'mr-0 mx-auto'"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                     </svg>
-                    <span class="font-medium">Kategori</span>
+                    <span class="font-medium transition-opacity duration-300"
+                        :class="sidebarOpen ? 'opacity-100' : 'opacity-0 hidden'">Kategori</span>
                 </a>
 
                 <a href="{{ route('admin.suppliers.index') }}"
-                    class="flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all
-                          {{ request()->routeIs('admin.suppliers.*') ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white' }}">
-                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    class="flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all group whitespace-nowrap
+                          {{ request()->routeIs('admin.suppliers.*') ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white' }}"
+                    title="Supplier">
+                    <svg class="w-5 h-5 flex-shrink-0 transition-colors" :class="sidebarOpen ? 'mr-3' : 'mr-0 mx-auto'"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                     </svg>
-                    <span class="font-medium">Supplier</span>
+                    <span class="font-medium transition-opacity duration-300"
+                        :class="sidebarOpen ? 'opacity-100' : 'opacity-0 hidden'">Supplier</span>
                 </a>
 
                 <!-- INVENTORY Group -->
-                <div class="mt-6 mb-3">
-                    <h3 class="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Inventory</h3>
+                <div class="mt-6 mb-3 transition-opacity duration-300"
+                    :class="sidebarOpen ? 'px-3 opacity-100' : 'px-0 opacity-0 hidden'">
+                    <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Inventory</h3>
                 </div>
+                <div class="my-3 border-t border-slate-800" :class="!sidebarOpen ? 'block' : 'hidden'"></div>
 
                 <a href="{{ route('admin.stock.receiving.index') }}"
-                    class="flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all
-                          {{ request()->routeIs('admin.stock.*') ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white' }}">
-                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    class="flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all group whitespace-nowrap
+                          {{ request()->routeIs('admin.stock.*') ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white' }}"
+                    title="Stock">
+                    <svg class="w-5 h-5 flex-shrink-0 transition-colors" :class="sidebarOpen ? 'mr-3' : 'mr-0 mx-auto'"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                     </svg>
-                    <span class="font-medium">Stock</span>
+                    <span class="font-medium transition-opacity duration-300"
+                        :class="sidebarOpen ? 'opacity-100' : 'opacity-0 hidden'">Stock</span>
                 </a>
 
                 <!-- SETTINGS Group -->
-                <div class="mt-6 mb-3">
-                    <h3 class="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Pengaturan</h3>
+                <div class="mt-6 mb-3 transition-opacity duration-300"
+                    :class="sidebarOpen ? 'px-3 opacity-100' : 'px-0 opacity-0 hidden'">
+                    <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Pengaturan</h3>
                 </div>
+                <div class="my-3 border-t border-slate-800" :class="!sidebarOpen ? 'block' : 'hidden'"></div>
 
                 <a href="{{ route('admin.users.index') }}"
-                    class="flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all
-                          {{ request()->routeIs('admin.users.*') ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white' }}">
-                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    class="flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all group whitespace-nowrap
+                          {{ request()->routeIs('admin.users.*') ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white' }}"
+                    title="Manajemen User">
+                    <svg class="w-5 h-5 flex-shrink-0 transition-colors" :class="sidebarOpen ? 'mr-3' : 'mr-0 mx-auto'"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                     </svg>
-                    <span class="font-medium">Manajemen User</span>
+                    <span class="font-medium transition-opacity duration-300"
+                        :class="sidebarOpen ? 'opacity-100' : 'opacity-0 hidden'">Manajemen User</span>
                 </a>
 
                 <!-- REPORTS Group -->
-                <div class="mt-6 mb-3">
-                    <h3 class="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Laporan</h3>
+                <div class="mt-6 mb-3 transition-opacity duration-300"
+                    :class="sidebarOpen ? 'px-3 opacity-100' : 'px-0 opacity-0 hidden'">
+                    <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Laporan</h3>
                 </div>
+                <div class="my-3 border-t border-slate-800" :class="!sidebarOpen ? 'block' : 'hidden'"></div>
 
                 <a href="#"
-                    class="flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all text-slate-300 hover:bg-slate-800/50 hover:text-white">
-                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    class="flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all group whitespace-nowrap text-slate-300 hover:bg-slate-800/50 hover:text-white"
+                    title="Laporan Penjualan">
+                    <svg class="w-5 h-5 flex-shrink-0 transition-colors" :class="sidebarOpen ? 'mr-3' : 'mr-0 mx-auto'"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    <span class="font-medium">Laporan Penjualan</span>
+                    <span class="font-medium transition-opacity duration-300"
+                        :class="sidebarOpen ? 'opacity-100' : 'opacity-0 hidden'">Laporan Penjualan</span>
                 </a>
             </nav>
 
             <!-- User Info at Bottom -->
-            <div class="p-4 border-t border-slate-800">
-                <div class="flex items-center space-x-3">
-                    <div class="w-9 h-9 bg-slate-700 rounded-full flex items-center justify-center">
+            <div class="p-4 border-t border-slate-800 overflow-hidden">
+                <div class="flex items-center space-x-3 whitespace-nowrap">
+                    <div class="w-9 h-9 bg-slate-700 rounded-full flex-shrink-0 flex items-center justify-center">
                         <span
                             class="text-white font-medium text-sm">{{ substr(auth()->user()->name ?? 'A', 0, 1) }}</span>
                     </div>
-                    <div class="flex-1 min-w-0">
+                    <div class="flex-1 min-w-0 transition-opacity duration-300"
+                        :class="sidebarOpen ? 'opacity-100' : 'opacity-0 hidden'">
                         <p class="text-sm font-medium text-white truncate">{{ auth()->user()->name ?? 'Admin' }}</p>
                         <p class="text-xs text-slate-400 truncate">{{ auth()->user()->email ?? '' }}</p>
                     </div>
@@ -127,15 +172,16 @@
         </aside>
 
         <!-- Main Content -->
-        <div class="flex-1 flex flex-col">
+        <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
             <!-- Header -->
-            <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
+            <header
+                class="h-16 bg-white border-b border-gray-200 flex flex-shrink-0 items-center justify-between px-6 z-10">
                 <h1 class="text-xl font-semibold text-gray-800">{{ $title ?? 'Dashboard' }}</h1>
 
                 <div class="flex items-center space-x-4">
                     <!-- POS Button -->
                     <a href="{{ route('pos.index') }}"
-                        class="inline-flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors shadow-sm">
+                        class="inline-flex items-center px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-medium rounded-lg transition-colors shadow-sm border border-slate-700">
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
@@ -146,14 +192,14 @@
                     <!-- User Menu -->
                     <div x-data="{ open: false }" class="relative">
                         <button @click="open = !open" type="button"
-                            class="flex items-center space-x-2 text-gray-700 hover:text-gray-900">
+                            class="flex items-center space-x-2 text-gray-700 hover:text-gray-900 focus:outline-none">
                             <div class="w-8 h-8 bg-slate-800 rounded-full flex items-center justify-center">
                                 <span
                                     class="text-white font-medium text-sm">{{ substr(auth()->user()->name ?? 'A', 0, 1) }}</span>
                             </div>
-                            <span class="font-medium">{{ auth()->user()->name ?? 'Admin' }}</span>
-                            <svg class="w-4 h-4 transition-transform" :class="{ 'rotate-180': open }" fill="none"
-                                stroke="currentColor" viewBox="0 0 24 24">
+                            <span class="font-medium hidden md:block">{{ auth()->user()->name ?? 'Admin' }}</span>
+                            <svg class="w-4 h-4 transition-transform hidden md:block" :class="{ 'rotate-180': open }"
+                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M19 9l-7 7-7-7" />
                             </svg>
@@ -180,8 +226,8 @@
                 </div>
             </header>
 
-            <!-- Page Content -->
-            <main class="flex-1 overflow-auto p-6 bg-gray-50">
+            <!-- Page Content (Scrollable) -->
+            <main class="flex-1 overflow-y-auto p-6 bg-gray-50">
                 <!-- Flash Messages -->
                 @if (session('success'))
                     <div class="mb-6 p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg">
