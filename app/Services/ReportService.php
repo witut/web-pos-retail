@@ -6,6 +6,7 @@ use App\Models\Transaction;
 use App\Models\Product;
 use App\Models\StockMovement;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 /**
  * ReportService
@@ -21,6 +22,50 @@ use Illuminate\Support\Facades\DB;
  */
 class ReportService
 {
+    /**
+     * Get dashboard summary statistics (Today's KPI)
+     * 
+     * @return array
+     */
+    public function getDashboardStats(): array
+    {
+        $today = Carbon::today();
+
+        // 1. Transaction Stats Today
+        $todayTrx = Transaction::whereDate('transaction_date', $today)
+            ->completed()
+            ->get();
+
+        $todaySales = $todayTrx->sum('total');
+        $todayCount = $todayTrx->count();
+
+        // Calculate Profit (Total - Cost of Goods Sold)
+        // Note: For now assuming total profit is stored/calc via model method or simple subtraction
+        $todayProfit = $todayTrx->sum(function ($trx) {
+            return $trx->getTotalProfit(); // Assuming this method exists on model based on getSalesReport usage
+        });
+
+        // 2. Low Stock Count
+        $lowStockCount = Product::active()
+            ->whereColumn('stock_on_hand', '<=', 'min_stock_alert')
+            ->count();
+
+        // 3. Compare with yesterday for trend (optional, simple +/-)
+        $yesterday = Carbon::yesterday();
+        $yesterdaySales = Transaction::whereDate('transaction_date', $yesterday)
+            ->completed()
+            ->sum('total');
+
+        $growth = $yesterdaySales > 0 ? (($todaySales - $yesterdaySales) / $yesterdaySales) * 100 : 100;
+
+        return [
+            'today_sales' => $todaySales,
+            'today_transactions' => $todayCount,
+            'today_profit' => $todayProfit,
+            'low_stock_count' => $lowStockCount,
+            'growth_percentage' => round($growth, 1)
+        ];
+    }
     /**
      * Get sales report untuk periode tertentu
      * 
@@ -226,21 +271,48 @@ class ReportService
      * @param string $endDate
      * @return \Illuminate\Support\Collection
      */
-    public function getDailySalesSummary(string $startDate, string $endDate)
+    /**
+     * Get daily sales summary (untuk grafik)
+     * 
+     * @param string $startDate
+     * @param string $endDate
+     * @return array
+     */
+    public function getDailySalesSummary(string $startDate, string $endDate): array
     {
-        return Transaction::whereBetween('transaction_date', [$startDate, $endDate])
+        $salesData = Transaction::whereBetween('transaction_date', [$startDate, $endDate])
             ->completed()
             ->select(
                 DB::raw('DATE(transaction_date) as date'),
-                DB::raw('COUNT(*) as transaction_count'),
-                DB::raw('SUM(total) as total_sales'),
-                DB::raw('AVG(total) as avg_transaction')
+                DB::raw('SUM(total) as total_sales')
             )
             ->groupBy('date')
             ->orderBy('date')
-            ->get();
+            ->pluck('total_sales', 'date')
+            ->toArray();
+
+        // Fill missing dates with 0
+        $chartData = [
+            'labels' => [],
+            'data' => []
+        ];
+
+        $period = \Carbon\CarbonPeriod::create($startDate, $endDate);
+
+        foreach ($period as $date) {
+            $dateString = $date->format('Y-m-d');
+            $chartData['labels'][] = $date->format('d M');
+            $chartData['data'][] = $salesData[$dateString] ?? 0;
+        }
+
+        return $chartData;
     }
 
+    /**
+     * Get low stock alert report
+     * 
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
     /**
      * Get low stock alert report
      * 
@@ -252,6 +324,32 @@ class ReportService
             ->active()
             ->with('category')
             ->orderBy('stock_on_hand')
+            ->get();
+    }
+
+    /**
+     * Get dead stock report (Barang tidak laku dalam X hari)
+     * 
+     * @param int $days
+     * @return \Illuminate\Support\Collection
+     */
+    public function getDeadStockReport(int $days = 30)
+    {
+        $date = Carbon::now()->subDays($days);
+
+        // Subquery untuk mendapatkan ID produk yang terjual dalam X hari terakhir
+        $soldProductIds = DB::table('transaction_items')
+            ->join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
+            ->where('transactions.transaction_date', '>=', $date)
+            ->where('transactions.status', 'completed')
+            ->pluck('product_id');
+
+        // Ambil produk yang TIDAK ada di list terjual & stok > 0
+        return Product::active()
+            ->whereNotIn('id', $soldProductIds)
+            ->where('stock_on_hand', '>', 0)
+            ->with('category')
+            ->orderByDesc('stock_on_hand') // Prioritaskan yang numpuk banyak
             ->get();
     }
 }

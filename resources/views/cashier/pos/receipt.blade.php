@@ -17,6 +17,8 @@
             width: 80mm;
             padding: 10px;
             background: white;
+            margin: 0 auto;
+            /* Center receipt */
         }
 
         .header {
@@ -146,8 +148,8 @@
         <div class="header">
             <div class="store-name">{{ $storeName ?? 'TOKO RETAIL' }}</div>
             <div class="store-info">
-                Jl. Contoh No. 123<br>
-                Telp: 021-12345678
+                {{ $storeAddress ?? 'Jl. Contoh No. 123' }}<br>
+                Telp: {{ $storePhone ?? '-' }}
             </div>
         </div>
 
@@ -243,7 +245,7 @@
     <!-- Print Button (no-print) -->
     <div class="no-print" style="text-align: center; margin-top: 20px;">
         <button onclick="window.print()"
-            style="padding: 10px 30px; font-size: 14px; cursor: pointer; background: #334155; color: white; border: none; border-radius: 5px;">
+            style="padding: 10px 30px; font-size: 14px; cursor: pointer; background: #1e293b; color: white; border: none; border-radius: 5px;">
             Cetak Struk
         </button>
         <button onclick="window.close()"

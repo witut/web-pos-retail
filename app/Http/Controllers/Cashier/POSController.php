@@ -256,9 +256,11 @@ class POSController extends Controller
 
         $transaction->load('items.product', 'cashier');
         $storeName = Setting::getStoreName();
+        $storeAddress = Setting::get('store_address', 'Jl. Contoh No. 123');
+        $storePhone = Setting::get('store_phone', '08123456789');
         $receiptFooter = Setting::getReceiptFooter();
 
-        return view('cashier.pos.receipt', compact('transaction', 'storeName', 'receiptFooter'));
+        return view('cashier.pos.receipt', compact('transaction', 'storeName', 'storeAddress', 'storePhone', 'receiptFooter'));
     }
 
     /**

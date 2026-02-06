@@ -50,14 +50,16 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
         Route::get('/opname', [StockController::class, 'opname'])->name('opname.index');
     });
 
-    // Reports (placeholder for future)
-    // Route::prefix('reports')->name('reports.')->group(function () {
-    //     Route::get('/sales', [ReportController::class, 'sales'])->name('sales');
-    //     Route::get('/stock', [ReportController::class, 'stock'])->name('stock');
-    // });
+    // Reports
+    Route::prefix('reports')->name('reports.')->group(function () {
+        Route::get('/sales', [\App\Http\Controllers\Admin\ReportController::class, 'sales'])->name('sales');
+        Route::get('/stock', [\App\Http\Controllers\Admin\ReportController::class, 'stock'])->name('stock');
+        Route::get('/dead-stock', [\App\Http\Controllers\Admin\ReportController::class, 'deadStock'])->name('dead_stock');
+    });
 
-    // Settings (placeholder for future)
-    // Route::get('/settings', [SettingController::class, 'index'])->name('settings');
+    // Settings
+    Route::get('/settings', [\App\Http\Controllers\Admin\SettingController::class, 'index'])->name('settings.index');
+    Route::post('/settings', [\App\Http\Controllers\Admin\SettingController::class, 'update'])->name('settings.update');
 
     // Users management
     Route::resource('users', \App\Http\Controllers\Admin\UserController::class);

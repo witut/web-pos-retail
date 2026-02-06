@@ -121,26 +121,6 @@
                         :class="sidebarOpen ? 'opacity-100' : 'opacity-0 hidden'">Stock</span>
                 </a>
 
-                <!-- SETTINGS Group -->
-                <div class="mt-6 mb-3 transition-opacity duration-300"
-                    :class="sidebarOpen ? 'px-3 opacity-100' : 'px-0 opacity-0 hidden'">
-                    <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Pengaturan</h3>
-                </div>
-                <div class="my-3 border-t border-slate-800" :class="!sidebarOpen ? 'block' : 'hidden'"></div>
-
-                <a href="{{ route('admin.users.index') }}"
-                    class="flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all group whitespace-nowrap
-                          {{ request()->routeIs('admin.users.*') ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white' }}"
-                    title="Manajemen User">
-                    <svg class="w-5 h-5 flex-shrink-0 transition-colors" :class="sidebarOpen ? 'mr-3' : 'mr-0 mx-auto'"
-                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                    </svg>
-                    <span class="font-medium transition-opacity duration-300"
-                        :class="sidebarOpen ? 'opacity-100' : 'opacity-0 hidden'">Manajemen User</span>
-                </a>
-
                 <!-- REPORTS Group -->
                 <div class="mt-6 mb-3 transition-opacity duration-300"
                     :class="sidebarOpen ? 'px-3 opacity-100' : 'px-0 opacity-0 hidden'">
@@ -148,8 +128,9 @@
                 </div>
                 <div class="my-3 border-t border-slate-800" :class="!sidebarOpen ? 'block' : 'hidden'"></div>
 
-                <a href="#"
-                    class="flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all group whitespace-nowrap text-slate-300 hover:bg-slate-800/50 hover:text-white"
+                <a href="{{ route('admin.reports.sales') }}"
+                    class="flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all group whitespace-nowrap
+                          {{ request()->routeIs('admin.reports.sales') ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white' }}"
                     title="Laporan Penjualan">
                     <svg class="w-5 h-5 flex-shrink-0 transition-colors" :class="sidebarOpen ? 'mr-3' : 'mr-0 mx-auto'"
                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -158,6 +139,66 @@
                     </svg>
                     <span class="font-medium transition-opacity duration-300"
                         :class="sidebarOpen ? 'opacity-100' : 'opacity-0 hidden'">Laporan Penjualan</span>
+                </a>
+
+                <a href="{{ route('admin.reports.stock') }}"
+                    class="flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all group whitespace-nowrap
+                          {{ request()->routeIs('admin.reports.stock') ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white' }}"
+                    title="Laporan Stok">
+                    <svg class="w-5 h-5 flex-shrink-0 transition-colors" :class="sidebarOpen ? 'mr-3' : 'mr-0 mx-auto'"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                    </svg>
+                    <span class="font-medium transition-opacity duration-300"
+                        :class="sidebarOpen ? 'opacity-100' : 'opacity-0 hidden'">Laporan Stok</span>
+                </a>
+
+                <a href="{{ route('admin.reports.dead_stock') }}"
+                    class="flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all group whitespace-nowrap
+                          {{ request()->routeIs('admin.reports.dead_stock') ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white' }}"
+                    title="Stok Pasif">
+                    <svg class="w-5 h-5 flex-shrink-0 transition-colors" :class="sidebarOpen ? 'mr-3' : 'mr-0 mx-auto'"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span class="font-medium transition-opacity duration-300"
+                        :class="sidebarOpen ? 'opacity-100' : 'opacity-0 hidden'">Stok Pasif</span>
+                </a>
+                <!-- PENGATURAN SYSTEM Group -->
+                <div class="px-3 mt-6 mb-2 text-xs font-semibold text-slate-500 uppercase tracking-wider"
+                    :class="!sidebarOpen ? 'text-center' : ''">
+                    <span :class="sidebarOpen ? '' : 'hidden'">Sistem</span>
+                    <span :class="!sidebarOpen ? '' : 'hidden'">...</span>
+                </div>
+
+                <a href="{{ route('admin.users.index') }}"
+                    class="flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all group whitespace-nowrap
+                        {{ request()->routeIs('admin.users.*') ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white' }}"
+                    title="User Management">
+                    <svg class="w-5 h-5 flex-shrink-0 transition-colors" :class="sidebarOpen ? 'mr-3' : 'mr-0 mx-auto'"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                    <span class="font-medium transition-opacity duration-300"
+                        :class="sidebarOpen ? 'opacity-100' : 'opacity-0 hidden'">Pengguna</span>
+                </a>
+
+                <a href="{{ route('admin.settings.index') }}"
+                    class="flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all group whitespace-nowrap
+                        {{ request()->routeIs('admin.settings.*') ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white' }}"
+                    title="Pengaturan Toko">
+                    <svg class="w-5 h-5 flex-shrink-0 transition-colors" :class="sidebarOpen ? 'mr-3' : 'mr-0 mx-auto'"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span class="font-medium transition-opacity duration-300"
+                        :class="sidebarOpen ? 'opacity-100' : 'opacity-0 hidden'">Pengaturan</span>
                 </a>
             </nav>
 
