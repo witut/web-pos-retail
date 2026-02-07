@@ -63,10 +63,34 @@ class SettingController extends Controller
             'pin_lockout_duration'
         ];
 
+        // Track changes
+        $changes = [];
+        $oldSettings = Setting::allSettings();
+
         foreach ($allowedKeys as $key) {
             if ($request->has($key)) {
-                Setting::set($key, $request->input($key));
+                $newValue = $request->input($key);
+                $oldValue = $oldSettings[$key] ?? null;
+
+                // Simple comparison (loose)
+                if ($oldValue != $newValue) {
+                    $changes[$key] = [
+                        'old' => $oldValue,
+                        'new' => $newValue,
+                    ];
+                    Setting::set($key, $newValue);
+                }
             }
+        }
+
+        if (!empty($changes)) {
+            \App\Models\AuditLog::logAction(
+                'SETTINGS_UPDATE',
+                'settings',
+                null,
+                array_map(fn($c) => $c['old'], $changes),
+                array_map(fn($c) => $c['new'], $changes)
+            );
         }
 
         return redirect()->route('admin.settings.index')

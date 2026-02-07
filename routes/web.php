@@ -61,6 +61,9 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/settings', [\App\Http\Controllers\Admin\SettingController::class, 'index'])->name('settings.index');
     Route::post('/settings', [\App\Http\Controllers\Admin\SettingController::class, 'update'])->name('settings.update');
 
+    // Audit Logs
+    Route::resource('audit-logs', \App\Http\Controllers\Admin\AuditLogController::class)->only(['index', 'show']);
+
     // Users management
     Route::resource('users', \App\Http\Controllers\Admin\UserController::class);
     Route::post('users/{user}/reset-pin', [\App\Http\Controllers\Admin\UserController::class, 'resetPin'])->name('users.reset-pin');

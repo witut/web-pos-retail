@@ -80,6 +80,14 @@ class UserController extends Controller
             'status' => $validated['status'],
         ]);
 
+        \App\Models\AuditLog::logAction(
+            'USER_CREATED',
+            'users',
+            (string) $user->id,
+            null,
+            ['name' => $user->name, 'email' => $user->email, 'role' => $user->role]
+        );
+
         return redirect()->route('admin.users.index')
             ->with('success', 'User berhasil ditambahkan');
     }
@@ -171,6 +179,14 @@ class UserController extends Controller
         }
 
         $user->update(['pin' => $validated['pin']]);
+
+        \App\Models\AuditLog::logAction(
+            'ADMIN_ACTION',
+            'users',
+            (string) $user->id,
+            null,
+            ['action' => 'reset_pin', 'target_user' => $user->name]
+        );
 
         return back()->with('success', 'PIN berhasil direset');
     }
