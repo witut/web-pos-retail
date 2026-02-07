@@ -214,6 +214,52 @@ class StockService
     }
 
     /**
+     * Adjust stock (untuk stock opname)
+     * 
+     * @param int $productId
+     * @param float $qty (Difference/Variance, can be +/-)
+     * @param string $unitName
+     * @param string $referenceId
+     * @param string $notes
+     * @param int $userId
+     * @return void
+     */
+    public function adjustStock(
+        int $productId,
+        float $qty,
+        string $unitName,
+        string $referenceId,
+        string $notes,
+        int $userId
+    ): void {
+        $product = Product::findOrFail($productId);
+
+        $oldStock = $product->stock_on_hand;
+        $newStock = $oldStock + $qty; // qty here is the variance (e.g. +5 or -2)
+
+        // Update product stock
+        $product->update(['stock_on_hand' => $newStock]);
+
+        // Create stock movement based on ENUM constraints
+        // movement_type: ADJUSTMENT
+        // reference_type: OPNAME
+
+        StockMovement::create([
+            'product_id' => $product->id,
+            'movement_type' => 'ADJUSTMENT',
+            'reference_type' => 'OPNAME', // Must match ENUM
+            'reference_id' => $referenceId,
+            'qty' => $qty,
+            'unit_name' => $unitName,
+            'cost_price' => $product->cost_price,
+            'stock_before' => $oldStock,
+            'stock_after' => $newStock,
+            'notes' => $notes,
+            'user_id' => $userId,
+        ]);
+    }
+
+    /**
      * Calculate weighted average cost (HPP)
      * 
      * Formula: ((Old Stock × Old Cost) + (New Qty × New Cost)) ÷ Total Stock

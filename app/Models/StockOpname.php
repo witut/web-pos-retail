@@ -24,6 +24,8 @@ class StockOpname extends Model
 {
     use HasFactory;
 
+    protected $table = 'stock_opname';
+
     protected $fillable = [
         'opname_number',
         'opname_date',

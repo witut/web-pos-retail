@@ -47,7 +47,10 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
         Route::get('/receiving/{receiving}', [StockController::class, 'showReceiving'])->name('receiving.show');
 
         Route::get('/movements', [StockController::class, 'movements'])->name('movements.index');
-        Route::get('/opname', [StockController::class, 'opname'])->name('opname.index');
+        Route::get('/movements', [StockController::class, 'movements'])->name('movements.index');
+
+        // Stock Opname
+        Route::resource('opname', \App\Http\Controllers\Admin\StockOpnameController::class);
     });
 
     // Reports

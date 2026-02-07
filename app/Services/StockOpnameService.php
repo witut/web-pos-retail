@@ -113,27 +113,19 @@ class StockOpnameService
 
                 $product = $item->product;
 
-                if ($item->variance > 0) {
-                    // Overstock: Tambah stock
-                    $stockService->restoreStock(
-                        $product->id,
-                        abs($item->variance),
-                        $product->base_unit,
-                        'OPNAME',
-                        $opname->opname_number,
-                        $userId
-                    );
-                } else {
-                    // Shortage: Kurangi stock
-                    $stockService->deductStock(
-                        $product->id,
-                        abs($item->variance),
-                        $product->base_unit,
-                        'OPNAME',
-                        $opname->opname_number,
-                        $userId
-                    );
-                }
+                // VARIANCE = PHYSICAL - SYSTEM
+                // Jika Variance Positif (+), artinya Fisik > Sistem => Kita perlu TAMBAH (Restore) stock sistem
+                // Jika Variance Negatif (-), artinya Fisik < Sistem => Kita perlu KURANGI (Deduct) stock sistem
+
+                // Use adjustStock which handles +/- variance correctly
+                $stockService->adjustStock(
+                    $product->id,
+                    $item->variance, // Pass signed variance directly (+/-)
+                    $product->base_unit,
+                    $opname->opname_number,
+                    $item->variance > 0 ? 'Opname: Overstock (Found)' : 'Opname: Shortage (Missing)',
+                    $userId
+                );
             }
         });
     }

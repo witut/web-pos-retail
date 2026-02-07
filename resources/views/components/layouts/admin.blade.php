@@ -121,6 +121,19 @@
                         :class="sidebarOpen ? 'opacity-100' : 'opacity-0 hidden'">Stock</span>
                 </a>
 
+                <a href="{{ route('admin.stock.opname.index') }}"
+                    class="flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all group whitespace-nowrap
+                          {{ request()->routeIs('admin.stock.opname.*') ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white' }}"
+                    title="Stock Opname">
+                    <svg class="w-5 h-5 flex-shrink-0 transition-colors" :class="sidebarOpen ? 'mr-3' : 'mr-0 mx-auto'"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                    <span class="font-medium transition-opacity duration-300"
+                        :class="sidebarOpen ? 'opacity-100' : 'opacity-0 hidden'">Opname / Stok Fisik</span>
+                </a>
+
                 <!-- REPORTS Group -->
                 <div class="mt-6 mb-3 transition-opacity duration-300"
                     :class="sidebarOpen ? 'px-3 opacity-100' : 'px-0 opacity-0 hidden'">

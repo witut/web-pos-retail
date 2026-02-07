@@ -24,6 +24,8 @@ class StockOpnameItem extends Model
 {
     use HasFactory;
 
+    protected $table = 'stock_opname_items';
+
     protected $fillable = [
         'opname_id',
         'product_id',
