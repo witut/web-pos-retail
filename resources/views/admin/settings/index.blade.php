@@ -112,6 +112,31 @@
                             <p class="text-xs text-gray-500 mt-1">Persentase PPn yang dikenakan pada setiap transaksi.
                             </p>
                         </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Tipe Pajak *</label>
+                            <div class="mt-2 space-y-2">
+                                <div class="flex items-center">
+                                    <input id="tax_type_exclusive" name="tax_type" type="radio" value="exclusive"
+                                        {{ old('tax_type', $settings['tax_type']) == 'exclusive' ? 'checked' : '' }}
+                                        class="focus:ring-slate-500 h-4 w-4 text-slate-600 border-gray-300">
+                                    <label for="tax_type_exclusive" class="ml-3 block text-sm font-medium text-gray-700">
+                                        Exclusive (Harga Belum Termasuk Pajak)
+                                    </label>
+                                </div>
+                                <p class="text-xs text-gray-500 ml-7">Harga Jual + PPN = Total Bayar</p>
+
+                                <div class="flex items-center">
+                                    <input id="tax_type_inclusive" name="tax_type" type="radio" value="inclusive"
+                                        {{ old('tax_type', $settings['tax_type']) == 'inclusive' ? 'checked' : '' }}
+                                        class="focus:ring-slate-500 h-4 w-4 text-slate-600 border-gray-300">
+                                    <label for="tax_type_inclusive" class="ml-3 block text-sm font-medium text-gray-700">
+                                        Inclusive (Harga Sudah Termasuk Pajak)
+                                    </label>
+                                </div>
+                                <p class="text-xs text-gray-500 ml-7">Harga Jual = Total Bayar (PPN dihitung dari harga jual)</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

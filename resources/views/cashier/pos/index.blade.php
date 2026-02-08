@@ -346,6 +346,7 @@
                     cart: [],
                     selectedCartIndex: -1,
                     taxRate: {{ $taxRate ?? 0 }},
+                    taxType: '{{ $taxType ?? 'exclusive' }}',
                     amountPaid: 0,
                     paymentMethod: 'cash',
                     showPaymentModal: false,
@@ -425,17 +426,30 @@
                     get totalItems() {
                         return this.cart.reduce((sum, item) => sum + parseInt(item.qty || 0), 0);
                     },
-                    get subtotal() {
-                        let total = this.cart.reduce((sum, item) => {
+                    get totalCartValue() {
+                        return this.cart.reduce((sum, item) => {
                             const subtotal = parseInt(item.subtotal || 0);
                             return sum + subtotal;
                         }, 0);
-                        return Math.round(total);
+                    },
+                    get subtotal() {
+                        if (this.taxType === 'inclusive') {
+                            return Math.round(this.totalCartValue - this.taxAmount);
+                        }
+                        return Math.round(this.totalCartValue);
                     },
                     get taxAmount() {
+                        if (this.taxType === 'inclusive') {
+                            // Tax included in price
+                            return Math.round(this.totalCartValue - (this.totalCartValue / (1 + this.taxRate / 100)));
+                        }
+                        // Tax added on top
                         return Math.round(this.subtotal * (this.taxRate / 100));
                     },
                     get grandTotal() {
+                        if (this.taxType === 'inclusive') {
+                            return Math.round(this.totalCartValue);
+                        }
                         return Math.round(this.subtotal + this.taxAmount);
                     },
                     get change() {

@@ -167,6 +167,19 @@
                         :class="sidebarOpen ? 'opacity-100' : 'opacity-0 hidden'">Laporan Stok</span>
                 </a>
 
+                <a href="{{ route('admin.reports.profit-loss') }}"
+                    class="flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all group whitespace-nowrap
+                          {{ request()->routeIs('admin.reports.profit-loss') ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white' }}"
+                    title="Laporan Laba Rugi">
+                    <svg class="w-5 h-5 flex-shrink-0 transition-colors" :class="sidebarOpen ? 'mr-3' : 'mr-0 mx-auto'"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span class="font-medium transition-opacity duration-300"
+                        :class="sidebarOpen ? 'opacity-100' : 'opacity-0 hidden'">Laporan Laba Rugi</span>
+                </a>
+
                 <a href="{{ route('admin.reports.dead_stock') }}"
                     class="flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all group whitespace-nowrap
                           {{ request()->routeIs('admin.reports.dead_stock') ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white' }}"

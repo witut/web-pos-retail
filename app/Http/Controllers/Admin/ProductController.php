@@ -65,6 +65,7 @@ class ProductController extends Controller
             'brand' => 'nullable|string|max:100',
             'base_unit' => 'required|string|max:20',
             'selling_price' => 'required|numeric|min:0',
+            'cost_price' => 'nullable|numeric|min:0', // Added cost_price
             'stock_on_hand' => 'nullable|numeric|min:0',
             'min_stock_alert' => 'nullable|numeric|min:0',
             'tax_rate' => 'nullable|numeric|min:0|max:100',
@@ -172,6 +173,7 @@ class ProductController extends Controller
             'brand' => 'nullable|string|max:100',
             'base_unit' => 'required|string|max:20',
             'selling_price' => 'required|numeric|min:0',
+            'cost_price' => 'nullable|numeric|min:0', // Added cost_price
             'min_stock_alert' => 'nullable|numeric|min:0',
             'tax_rate' => 'nullable|numeric|min:0|max:100',
             'status' => 'required|in:active,inactive',

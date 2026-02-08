@@ -333,6 +333,12 @@ class ReportService
      * @param int $days
      * @return \Illuminate\Support\Collection
      */
+    /**
+     * Get dead stock report (Barang tidak laku dalam X hari)
+     * 
+     * @param int $days
+     * @return \Illuminate\Support\Collection
+     */
     public function getDeadStockReport(int $days = 30)
     {
         $date = Carbon::now()->subDays($days);
@@ -351,5 +357,84 @@ class ReportService
             ->with('category')
             ->orderByDesc('stock_on_hand') // Prioritaskan yang numpuk banyak
             ->get();
+    }
+
+    /**
+     * Get profit & loss report (Laba Rugi)
+     * 
+     * @param string $startDate
+     * @param string $endDate
+     * @return array
+     */
+    public function getProfitLossReport(string $startDate, string $endDate): array
+    {
+        // 1. Get completed transactions in period
+        $transactions = Transaction::whereBetween('transaction_date', [$startDate, $endDate])
+            ->completed()
+            ->with(['items'])
+            ->get();
+
+        $summary = [
+            'gross_revenue' => 0, // Total Sales (Omzet Kotor)
+            'net_revenue' => 0,   // Omzet Bersih (After Discount/Tax) - For now same as Gross
+            'cogs' => 0,          // Cost of Goods Sold (HPP)
+            'gross_profit' => 0,  // Laba Kotor (Revenue - HPP)
+            'expenses' => 0,      // Biaya Operasional (Future feature)
+            'net_profit' => 0,    // Laba Bersih
+            'transaction_count' => $transactions->count(),
+            'items_sold' => 0
+        ];
+
+        $dailyBreakdown = [];
+
+        foreach ($transactions as $trx) {
+            $trxRevenue = $trx->total;
+            $trxCOGS = 0;
+            $trxItems = 0;
+
+            foreach ($trx->items as $item) {
+                // Calculate HPP for this item based on historical cost recorded at transaction time
+                // If historical cost is 0 (migration data), fallback to current product cost? 
+                // Better to trust recorded cost.
+                $itemCOGS = $item->cost_price * $item->qty;
+                $trxCOGS += $itemCOGS;
+                $trxItems += $item->qty;
+            }
+
+            $trxProfit = $trxRevenue - $trxCOGS;
+
+            $summary['gross_revenue'] += $trxRevenue;
+            $summary['cogs'] += $trxCOGS;
+            $summary['items_sold'] += $trxItems;
+
+            // Group by date for chart
+            $date = $trx->transaction_date->format('Y-m-d');
+            if (!isset($dailyBreakdown[$date])) {
+                $dailyBreakdown[$date] = [
+                    'date' => $date,
+                    'revenue' => 0,
+                    'cogs' => 0,
+                    'profit' => 0
+                ];
+            }
+            $dailyBreakdown[$date]['revenue'] += $trxRevenue;
+            $dailyBreakdown[$date]['cogs'] += $trxCOGS;
+            $dailyBreakdown[$date]['profit'] += $trxProfit;
+        }
+
+        $summary['net_revenue'] = $summary['gross_revenue']; // Adjust if discounts exist
+        $summary['gross_profit'] = $summary['net_revenue'] - $summary['cogs'];
+        $summary['net_profit'] = $summary['gross_profit'] - $summary['expenses'];
+
+        // Margin Calculation
+        $summary['gross_margin_percent'] = $summary['net_revenue'] > 0
+            ? ($summary['gross_profit'] / $summary['net_revenue']) * 100
+            : 0;
+
+        return [
+            'summary' => $summary,
+            'daily_breakdown' => array_values($dailyBreakdown), // Reset keys for JSON
+            'transactions' => $transactions // Optional: if we want drilldown
+        ];
     }
 }

@@ -74,4 +74,59 @@ class ReportController extends Controller
             'days' => $days
         ]);
     }
+
+    /**
+     * Laporan Laba Rugi (Profit & Loss)
+     */
+    public function profitLoss(Request $request)
+    {
+        $startDate = $request->input('start_date', Carbon::today()->startOfMonth()->format('Y-m-d'));
+        $endDate = $request->input('end_date', Carbon::today()->endOfMonth()->format('Y-m-d'));
+
+        $data = $this->reportService->getProfitLossReport($startDate, $endDate);
+
+        return view('admin.reports.profit_loss', array_merge($data, [
+            'startDate' => $startDate,
+            'endDate' => $endDate
+        ]));
+    }
+
+    /**
+     * Export Reports (Excel/PDF)
+     */
+    public function export(Request $request)
+    {
+        $type = $request->input('type', 'sales'); // sales, stock, profit_loss
+        $format = $request->input('format', 'excel'); // excel, pdf
+
+        $startDate = $request->input('start_date', Carbon::today()->startOfMonth()->format('Y-m-d'));
+        $endDate = $request->input('end_date', Carbon::today()->endOfMonth()->format('Y-m-d'));
+
+        $fileName = "{$type}_report_{$startDate}_{$endDate}";
+
+        if ($type === 'sales') {
+            $data = $this->reportService->getSalesReport($startDate, $endDate, $request->all());
+            $export = new \App\Exports\SalesReportExport($data['transactions']);
+            $fileName = "sales_report_{$startDate}_to_{$endDate}";
+        } elseif ($type === 'stock') {
+            $categoryId = $request->input('category_id');
+            $data = $this->reportService->getStockValueReport($categoryId);
+            $export = new \App\Exports\StockReportExport($data['products']);
+            $fileName = "stock_report_" . date('Y-m-d');
+        } elseif ($type === 'profit_loss') {
+            $data = $this->reportService->getProfitLossReport($startDate, $endDate);
+            $export = new \App\Exports\ProfitLossExport($data);
+            $fileName = "profit_loss_{$startDate}_to_{$endDate}";
+        } else {
+            return back()->with('error', 'Invalid report type');
+        }
+
+        if ($format === 'pdf') {
+            // Use DOMPDF
+            // For now, Maatwebsite Excel supports PDF via Dompdf if installed
+            return \Maatwebsite\Excel\Facades\Excel::download($export, "{$fileName}.pdf", \Maatwebsite\Excel\Excel::DOMPDF);
+        }
+
+        return \Maatwebsite\Excel\Facades\Excel::download($export, "{$fileName}.xlsx");
+    }
 }

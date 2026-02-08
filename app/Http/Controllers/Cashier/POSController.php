@@ -35,8 +35,9 @@ class POSController extends Controller
      */
     public function index()
     {
-        // Get tax rate dari settings
+        // Get tax settings
         $taxRate = Setting::getTaxRate();
+        $taxType = Setting::get('tax_type', 'exclusive');
 
         // Get today's transactions (untuk history view)
         $todayTransactions = Transaction::today()
@@ -46,7 +47,7 @@ class POSController extends Controller
             ->take(10)
             ->get();
 
-        return view('cashier.pos.index', compact('taxRate', 'todayTransactions'));
+        return view('cashier.pos.index', compact('taxRate', 'taxType', 'todayTransactions'));
     }
 
     /**

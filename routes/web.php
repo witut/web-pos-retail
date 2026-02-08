@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\SupplierController;
 use App\Http\Controllers\Admin\StockController;
+use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Cashier\POSController;
 
 /*
@@ -54,10 +55,12 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     });
 
     // Reports
-    Route::prefix('reports')->name('reports.')->group(function () {
-        Route::get('/sales', [\App\Http\Controllers\Admin\ReportController::class, 'sales'])->name('sales');
-        Route::get('/stock', [\App\Http\Controllers\Admin\ReportController::class, 'stock'])->name('stock');
-        Route::get('/dead-stock', [\App\Http\Controllers\Admin\ReportController::class, 'deadStock'])->name('dead_stock');
+    Route::controller(ReportController::class)->prefix('reports')->name('reports.')->group(function () {
+        Route::get('/sales', 'sales')->name('sales');
+        Route::get('/stock', 'stock')->name('stock');
+        Route::get('/dead-stock', 'deadStock')->name('dead_stock');
+        Route::get('/profit-loss', 'profitLoss')->name('profit-loss');
+        Route::get('/export', 'export')->name('export');
     });
 
     // Settings
@@ -115,4 +118,3 @@ use App\Http\Controllers\Auth\AuthController;
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
-

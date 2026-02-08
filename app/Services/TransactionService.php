@@ -246,10 +246,26 @@ class TransactionService
             $subtotal += $item['subtotal'];
         }
 
-        // Get tax rate dari settings (default 11%)
+        // Get tax settings
         $taxRate = Setting::getTaxRate();
-        $taxAmount = $subtotal * ($taxRate / 100);
+        $taxType = Setting::get('tax_type', 'exclusive');
 
+        if ($taxType === 'inclusive') {
+            // Formula: Tax = Total - (Total / (1 + Rate))
+            // Subtotal (DPP) = Total - Tax
+            $total = round($subtotal, 2); // In inclusive, SUM(prices) is the Total to pay
+            $taxAmount = $total - ($total / (1 + ($taxRate / 100)));
+            $subtotalNet = $total - $taxAmount;
+
+            return [
+                'subtotal' => round($subtotalNet, 2),
+                'tax_amount' => round($taxAmount, 2),
+                'total' => round($total, 2),
+            ];
+        }
+
+        // Exclusive (Default)
+        $taxAmount = $subtotal * ($taxRate / 100);
         $total = $subtotal + $taxAmount;
 
         return [

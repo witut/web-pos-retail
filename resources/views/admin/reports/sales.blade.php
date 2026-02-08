@@ -20,43 +20,64 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                Export Excel
-            </button>
         </div>
     </div>
 
     <!-- Filter Section -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6 no-print">
-        <form action="{{ route('admin.reports.sales') }}" method="GET"
-            class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Mulai Tanggal</label>
+        <div class="flex gap-2">
+            <form action="{{ route('admin.reports.sales') }}" method="GET"
+                class="flex flex-wrap gap-2 items-center bg-white dark:bg-slate-800 p-2 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700">
                 <input type="date" name="start_date" value="{{ $startDate }}"
-                    class="w-full rounded-lg border-gray-300 focus:ring-blue-500 focus:border-blue-500">
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Sampai Tanggal</label>
+                    class="px-3 py-1.5 border border-slate-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                <span class="text-slate-400">-</span>
                 <input type="date" name="end_date" value="{{ $endDate }}"
-                    class="w-full rounded-lg border-gray-300 focus:ring-blue-500 focus:border-blue-500">
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Kasir</label>
+                    class="px-3 py-1.5 border border-slate-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+
                 <select name="cashier_id"
-                    class="w-full rounded-lg border-gray-300 focus:ring-blue-500 focus:border-blue-500">
+                    class="px-3 py-1.5 border border-slate-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white">
                     <option value="">Semua Kasir</option>
                     @foreach($cashiers as $cashier)
                         <option value="{{ $cashier->id }}" {{ $selectedCashier == $cashier->id ? 'selected' : '' }}>
-                            {{ $cashier->name }}
-                        </option>
+                            {{ $cashier->name }}</option>
                     @endforeach
                 </select>
-            </div>
-            <div>
-                <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
-                    Filter Laporan
+
+                <select name="payment_method"
+                    class="px-3 py-1.5 border border-slate-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                    <option value="">Semua Metode</option>
+                    <option value="cash" {{ $selectedPaymentMethod == 'cash' ? 'selected' : '' }}>Tunai</option>
+                    <option value="qris" {{ $selectedPaymentMethod == 'qris' ? 'selected' : '' }}>QRIS</option>
+                    <option value="debit" {{ $selectedPaymentMethod == 'debit' ? 'selected' : '' }}>Debit</option>
+                </select>
+
+                <button type="submit"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-md text-sm font-medium transition-colors">
+                    Filter
                 </button>
+            </form>
+
+            <div x-data="{ open: false }" class="relative">
+                <button @click="open = !open"
+                    class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                    </svg>
+                    Export
+                </button>
+                <div x-show="open" @click.away="open = false"
+                    class="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-md shadow-lg py-1 z-50 border border-slate-200 dark:border-slate-700"
+                    x-cloak>
+                    <a href="{{ route('admin.reports.export', array_merge(request()->all(), ['type' => 'sales', 'format' => 'excel'])) }}"
+                        class="block px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">Export
+                        Excel</a>
+                    <a href="{{ route('admin.reports.export', array_merge(request()->all(), ['type' => 'sales', 'format' => 'pdf'])) }}"
+                        class="block px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">Export
+                        PDF</a>
+                </div>
             </div>
-        </form>
+        </div>
     </div>
 
     <!-- Summary Statistics -->

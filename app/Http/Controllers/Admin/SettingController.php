@@ -23,6 +23,7 @@ class SettingController extends Controller
             'store_phone' => '-',
             'receipt_footer' => 'Terima Kasih',
             'tax_rate' => 11,
+            'tax_type' => 'exclusive', // inclusive or exclusive
             'currency_symbol' => 'Rp',
             'void_time_limit' => 24,
             'low_stock_threshold' => 10,
@@ -56,6 +57,7 @@ class SettingController extends Controller
             'store_phone',
             'receipt_footer',
             'tax_rate',
+            'tax_type',
             'currency_symbol',
             'void_time_limit',
             'low_stock_threshold',
