@@ -24,9 +24,16 @@
             <div class="flex items-center space-x-4">
                 <span class="text-sm text-slate-300" x-data
                     x-text="new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })"></span>
-                <a href="{{ route('admin.dashboard') }}" class="text-sm text-blue-400 hover:text-blue-300">
-                    ← Kembali ke Admin
-                </a>
+                @if(auth()->user()->isAdmin())
+                    <a href="{{ route('admin.dashboard') }}" class="text-sm text-blue-400 hover:text-blue-300">
+                        ← Kembali ke Admin
+                    </a>
+                @else
+                    <a href="{{ route('pos.dashboard') }}" class="text-sm text-emerald-400 hover:text-emerald-300">
+                        Dashboard →
+                    </a>
+                @endif
+
             </div>
         </header>
 

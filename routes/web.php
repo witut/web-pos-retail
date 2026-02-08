@@ -84,6 +84,11 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 */
 Route::middleware(['auth', 'role:cashier,admin'])->prefix('pos')->name('pos.')->group(function () {
 
+    // Dashboard & Profile
+    Route::get('/dashboard', [\App\Http\Controllers\Cashier\DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/profile', [\App\Http\Controllers\Cashier\DashboardController::class, 'profile'])->name('profile');
+    Route::put('/profile', [\App\Http\Controllers\Cashier\DashboardController::class, 'updateProfile'])->name('profile.update');
+
     // POS Terminal
     Route::get('/', [POSController::class, 'index'])->name('index');
 
