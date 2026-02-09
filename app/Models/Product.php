@@ -298,6 +298,27 @@ class Product extends Model
     }
 
     /**
+     * Get conversion rate for a specific unit name
+     * 
+     * @param string $unitName
+     * @return float
+     */
+    public function getConversionRate(string $unitName): float
+    {
+        if ($unitName === $this->base_unit) {
+            return 1;
+        }
+
+        $unit = $this->units()->where('unit_name', $unitName)->first();
+
+        if ($unit) {
+            return (float) $unit->conversion_rate;
+        }
+
+        return 1; // Default fallback if not found
+    }
+
+    /**
      * Get full image URL
      * 
      * @return string|null

@@ -143,13 +143,17 @@ class StockService
     ): void {
         $product = Product::findOrFail($productId);
 
-        // Validate stock
-        if (!$product->hasStock($qty)) {
+        // Get conversion rate
+        $conversionRate = $product->getConversionRate($unitName);
+        $qtyInBaseUnit = $qty * $conversionRate;
+
+        // Validate stock (in base unit)
+        if (!$product->hasStock($qtyInBaseUnit)) {
             throw new Exception("Stok {$product->name} tidak mencukupi");
         }
 
         $oldStock = $product->stock_on_hand;
-        $newStock = $oldStock - $qty;
+        $newStock = $oldStock - $qtyInBaseUnit;
 
         // Update product stock
         $product->update(['stock_on_hand' => $newStock]);
@@ -160,9 +164,9 @@ class StockService
             'movement_type' => 'OUT',
             'reference_type' => $referenceType,
             'reference_id' => $referenceId,
-            'qty' => -$qty, // Negative untuk OUT
+            'qty' => -$qty, // Qty in transaction unit
             'unit_name' => $unitName,
-            'cost_price' => $product->cost_price,
+            'cost_price' => $product->cost_price * $conversionRate, // Cost proportional to unit
             'stock_before' => $oldStock,
             'stock_after' => $newStock,
             'notes' => null,
@@ -191,8 +195,12 @@ class StockService
     ): void {
         $product = Product::findOrFail($productId);
 
+        // Get conversion rate
+        $conversionRate = $product->getConversionRate($unitName);
+        $qtyInBaseUnit = $qty * $conversionRate;
+
         $oldStock = $product->stock_on_hand;
-        $newStock = $oldStock + $qty;
+        $newStock = $oldStock + $qtyInBaseUnit;
 
         // Update product stock
         $product->update(['stock_on_hand' => $newStock]);
@@ -203,9 +211,9 @@ class StockService
             'movement_type' => 'RETURN',
             'reference_type' => $referenceType,
             'reference_id' => $referenceId,
-            'qty' => $qty, // Positive untuk RETURN
+            'qty' => $qty, // Qty in transaction unit
             'unit_name' => $unitName,
-            'cost_price' => $product->cost_price,
+            'cost_price' => $product->cost_price * $conversionRate,
             'stock_before' => $oldStock,
             'stock_after' => $newStock,
             'notes' => "Pengembalian stok dari void transaksi",
@@ -234,8 +242,12 @@ class StockService
     ): void {
         $product = Product::findOrFail($productId);
 
+        // Get conversion rate
+        $conversionRate = $product->getConversionRate($unitName);
+        $qtyInBaseUnit = $qty * $conversionRate;
+
         $oldStock = $product->stock_on_hand;
-        $newStock = $oldStock + $qty; // qty here is the variance (e.g. +5 or -2)
+        $newStock = $oldStock + $qtyInBaseUnit; // qty here is the variance (e.g. +5 or -2)
 
         // Update product stock
         $product->update(['stock_on_hand' => $newStock]);
@@ -249,9 +261,9 @@ class StockService
             'movement_type' => 'ADJUSTMENT',
             'reference_type' => 'OPNAME', // Must match ENUM
             'reference_id' => $referenceId,
-            'qty' => $qty,
+            'qty' => $qty, // Qty in transaction unit
             'unit_name' => $unitName,
-            'cost_price' => $product->cost_price,
+            'cost_price' => $product->cost_price * $conversionRate,
             'stock_before' => $oldStock,
             'stock_after' => $newStock,
             'notes' => $notes,

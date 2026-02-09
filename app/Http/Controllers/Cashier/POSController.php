@@ -187,7 +187,7 @@ class POSController extends Controller
                 return [
                     'product_id' => $item['product_id'],
                     'qty' => $item['qty'],
-                    'price' => $item['price'],
+                    'unit_price' => $item['price'], // Pass as unit_price for Service
                     'unit_name' => $item['unit_name'],
                 ];
             })->toArray();

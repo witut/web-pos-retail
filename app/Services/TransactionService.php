@@ -298,22 +298,31 @@ class TransactionService
                 throw new Exception("Produk ID {$item['product_id']} tidak ditemukan atau tidak aktif");
             }
 
+            // Get unit name and conversion rate
+            $unitName = $item['unit_name'] ?? $product->base_unit;
+            $conversionRate = $product->getConversionRate($unitName);
+            $qtyInBaseUnit = $item['qty'] * $conversionRate;
+
             // Check stock availability
-            if (!$product->hasStock($item['qty'])) {
-                throw new Exception("Stok {$product->name} tidak mencukupi (tersedia: {$product->stock_on_hand})");
+            if (!$product->hasStock($qtyInBaseUnit)) {
+                $availableInUnit = floor($product->stock_on_hand / $conversionRate);
+                throw new Exception("Stok {$product->name} tidak mencukupi (tersedia: {$availableInUnit} {$unitName})");
             }
 
             // Get unit price (dari product atau product unit)
             $unitPrice = $item['unit_price'] ?? $product->selling_price;
 
+            // Calculate Cost Price per Unit (HPP base * conversion)
+            $costPricePerUnit = $product->cost_price * $conversionRate;
+
             $preparedItems[] = [
                 'product_id' => $product->id,
                 'product_name' => $product->name,
-                'unit_name' => $item['unit_name'] ?? $product->base_unit,
+                'unit_name' => $unitName,
                 'qty' => $item['qty'],
                 'unit_price' => $unitPrice,
                 'subtotal' => $unitPrice * $item['qty'],
-                'cost_price' => $product->cost_price, // HPP saat ini
+                'cost_price' => $costPricePerUnit, // HPP per unit transaksi
             ];
         }
 

@@ -78,28 +78,41 @@
                                     <td class="px-4 py-3">
                                         <div class="font-medium text-gray-800" x-text="item.name"></div>
                                         <div class="text-xs text-gray-500" x-text="item.sku"></div>
-                                        
+
                                         <!-- Unit Selector -->
-                                        <div x-show="item.available_units && item.available_units.length > 1" class="mt-1">
+                                        <div x-show="item.available_units && item.available_units.length > 1"
+                                            class="mt-1">
                                             <select x-model="item.unit" @change="changeUnit(index, $event.target.value)"
                                                 class="text-xs border-gray-300 rounded focus:ring-slate-500 focus:border-slate-500 py-1 pl-2 pr-6 bg-slate-50 text-slate-700">
                                                 <template x-for="unit in item.available_units" :key="unit.name">
-                                                    <option :value="unit.name" x-text="unit.name" :selected="unit.name === item.unit"></option>
+                                                    <option :value="unit.name" x-text="unit.name"
+                                                        :selected="unit.name === item.unit"></option>
                                                 </template>
                                             </select>
                                         </div>
-                                        <div x-show="!item.available_units || item.available_units.length <= 1" class="text-xs text-gray-400 mt-1">
+                                        <div x-show="!item.available_units || item.available_units.length <= 1"
+                                            class="text-xs text-gray-400 mt-1">
                                             <span x-text="item.unit"></span>
                                         </div>
                                     </td>
                                     <td class="px-4 py-3">
-                                        <div class="flex items-center justify-center space-x-1">
+                                        <div class="flex items-center justify-center space-x-1 relative">
+                                            <!-- Stock Error Tooltip (Centered over controls) -->
+                                            <div x-show="item.showStockError" x-transition.opacity.duration.200ms
+                                                class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-2 py-1 bg-red-600 text-white text-xs rounded shadow-lg z-10 pointer-events-none">
+                                                <span x-text="'Stok hanya ' + item.stock"></span>
+                                                <!-- Arrow -->
+                                                <div
+                                                    class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-red-600">
+                                                </div>
+                                            </div>
+
                                             <button @click="decrementQty(index)"
                                                 class="w-7 h-7 flex items-center justify-center bg-gray-200 hover:bg-gray-300 rounded text-gray-700">
                                                 -
                                             </button>
                                             <input type="number" x-model.number="item.qty" min="1"
-                                                @change="updateSubtotal(index)"
+                                                @change="validateManualQty(index)"
                                                 class="w-12 text-center border border-gray-300 rounded py-1 text-sm">
                                             <button @click="incrementQty(index)"
                                                 class="w-7 h-7 flex items-center justify-center bg-gray-200 hover:bg-gray-300 rounded text-gray-700">
@@ -606,7 +619,9 @@
                                 subtotal: price,
                                 stock: stock,
                                 unit: baseUnit,
-                                available_units: availableUnits
+                                available_units: availableUnits,
+                                conversion: 1, // Base unit conversion is 1
+                                showStockError: false // For tooltip
                             });
                         }
                         this.$refs.searchInput.focus();
@@ -619,19 +634,61 @@
                         if (unit) {
                             item.unit = unit.name;
                             item.price = unit.price;
+                            item.conversion = unit.conversion; // Update conversion
                             this.updateSubtotal(index);
+                            this.validateManualQty(index); // Re-validate stock with new unit
                         }
                     },
 
                     incrementQty(index) {
                         const item = this.cart[index];
-                        // TODO: Check stock with conversion rate logic if needed
-                        // For now assuming stock is in base unit and we validat against base stock?
-                        // Complex: if unit is Box (24), qty 1 = 24 stock.
-                        // Simplified for now: just increment. 
-                        // Real logic should convert qty * conversion vs stock.
+
+                        // Validasi Stok dengan Conversion
+                        const conversion = item.conversion || 1;
+                        const qtyInBaseKey = (item.qty + 1) * conversion;
+
+                        if (qtyInBaseKey > item.stock) {
+                            // Show Tooltip
+                            item.showStockError = true;
+
+                            // Hide after 2 seconds
+                            setTimeout(() => {
+                                item.showStockError = false;
+                            }, 2000);
+
+                            return;
+                        }
 
                         item.qty++;
+                        this.updateSubtotal(index);
+                    },
+
+                    validateManualQty(index) {
+                        const item = this.cart[index];
+                        let qty = parseInt(item.qty);
+
+                        // Ensure valid number
+                        if (isNaN(qty) || qty < 1) {
+                            qty = 1;
+                        }
+
+                        // Check against stock with conversion
+                        const conversion = item.conversion || 1;
+                        const qtyInBase = qty * conversion;
+
+                        if (qtyInBase > item.stock) {
+                            // Calculate max possible qty (floor)
+                            const maxQty = Math.floor(item.stock / conversion);
+                            qty = maxQty > 0 ? maxQty : 1; // Minimal 1 jika stock ada tapi < 1 unit (edge case)
+
+                            // Show Tooltip
+                            item.showStockError = true;
+                            setTimeout(() => {
+                                item.showStockError = false;
+                            }, 2000);
+                        }
+
+                        item.qty = qty;
                         this.updateSubtotal(index);
                     },
 
