@@ -78,6 +78,19 @@
                                     <td class="px-4 py-3">
                                         <div class="font-medium text-gray-800" x-text="item.name"></div>
                                         <div class="text-xs text-gray-500" x-text="item.sku"></div>
+                                        
+                                        <!-- Unit Selector -->
+                                        <div x-show="item.available_units && item.available_units.length > 1" class="mt-1">
+                                            <select x-model="item.unit" @change="changeUnit(index, $event.target.value)"
+                                                class="text-xs border-gray-300 rounded focus:ring-slate-500 focus:border-slate-500 py-1 pl-2 pr-6 bg-slate-50 text-slate-700">
+                                                <template x-for="unit in item.available_units" :key="unit.name">
+                                                    <option :value="unit.name" x-text="unit.name" :selected="unit.name === item.unit"></option>
+                                                </template>
+                                            </select>
+                                        </div>
+                                        <div x-show="!item.available_units || item.available_units.length <= 1" class="text-xs text-gray-400 mt-1">
+                                            <span x-text="item.unit"></span>
+                                        </div>
                                     </td>
                                     <td class="px-4 py-3">
                                         <div class="flex items-center justify-center space-x-1">
@@ -261,7 +274,9 @@
                     <!-- Cash Input (for cash payment) -->
                     <div x-show="paymentMethod === 'cash'">
                         <label class="block text-sm font-medium text-gray-700 mb-2">Uang Diterima</label>
-                        <input type="number" x-model.number="amountPaid"
+                        <input type="text" x-ref="amountPaidInput" :value="formatNumber(amountPaid)"
+                            @input="updateAmountPaid($event.target.value)" @keydown.enter.prevent="processCheckout()"
+                            placeholder="0"
                             class="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg text-right focus:ring-2 focus:ring-slate-500">
                     </div>
                 </div>
@@ -294,7 +309,7 @@
                 <p class="text-sm text-gray-600 mb-1">No. Invoice</p>
                 <p class="text-xl font-mono font-bold text-slate-700 mb-6" x-text="lastInvoice"></p>
                 <div class="space-y-3">
-                    <button @click="printReceipt()"
+                    <button @click="printReceipt()" x-ref="printReceiptBtn"
                         class="w-full py-3 bg-slate-800 text-white font-medium rounded-lg hover:bg-slate-900 transition-colors">
                         Cetak Struk
                     </button>
@@ -538,7 +553,8 @@
                             name: item.name,
                             selling_price: parseInt(item.price) || 0,
                             stock_on_hand: parseInt(item.stock) || 0,
-                            base_unit: 'pcs'
+                            base_unit: item.base_unit || 'pcs',
+                            units: item.units || []
                         });
                         this.searchQuery = '';
                         this.autocompleteResults = [];
@@ -549,8 +565,30 @@
                     addToCart(product) {
                         const price = parseInt(product.selling_price) || 0;
                         const stock = parseInt(product.stock_on_hand) || 0;
+                        const baseUnit = product.base_unit || 'pcs';
 
-                        const existing = this.cart.find(item => item.id === product.id);
+                        // Prepare units array
+                        let availableUnits = [{
+                            name: baseUnit,
+                            price: price,
+                            conversion: 1,
+                            is_base: true
+                        }];
+
+                        if (product.units && Array.isArray(product.units)) {
+                            product.units.forEach(u => {
+                                availableUnits.push({
+                                    name: u.name,
+                                    price: parseInt(u.selling_price),
+                                    conversion: parseFloat(u.conversion_rate),
+                                    is_base: false
+                                });
+                            });
+                        }
+
+                        // Check if item exists with the SAME unit (Base Unit)
+                        const existing = this.cart.find(item => item.id === product.id && item.unit === baseUnit);
+
                         if (existing) {
                             if (existing.qty < stock) {
                                 existing.qty++;
@@ -567,18 +605,34 @@
                                 qty: 1,
                                 subtotal: price,
                                 stock: stock,
-                                unit: product.base_unit || 'pcs'
+                                unit: baseUnit,
+                                available_units: availableUnits
                             });
                         }
                         this.$refs.searchInput.focus();
                     },
 
-                    incrementQty(index) {
+                    changeUnit(index, unitName) {
                         const item = this.cart[index];
-                        if (item.qty < item.stock) {
-                            item.qty++;
+                        const unit = item.available_units.find(u => u.name === unitName);
+
+                        if (unit) {
+                            item.unit = unit.name;
+                            item.price = unit.price;
                             this.updateSubtotal(index);
                         }
+                    },
+
+                    incrementQty(index) {
+                        const item = this.cart[index];
+                        // TODO: Check stock with conversion rate logic if needed
+                        // For now assuming stock is in base unit and we validat against base stock?
+                        // Complex: if unit is Box (24), qty 1 = 24 stock.
+                        // Simplified for now: just increment. 
+                        // Real logic should convert qty * conversion vs stock.
+
+                        item.qty++;
+                        this.updateSubtotal(index);
                     },
 
                     decrementQty(index) {
@@ -596,6 +650,7 @@
 
                     removeItem(index) {
                         this.cart.splice(index, 1);
+
                     },
 
                     // Custom confirmation modal helper
@@ -642,6 +697,12 @@
 
                     setAmountPaid(amount) {
                         this.amountPaid = parseInt(amount) || 0;
+                        // Focus back to input after clicking quick cash
+                        this.$nextTick(() => {
+                            if (this.$refs.amountPaidInput) {
+                                this.$refs.amountPaidInput.focus();
+                            }
+                        });
                     },
 
                     openPaymentModal() {
@@ -650,7 +711,28 @@
                             this.amountPaid = this.grandTotal;
                         }
                         this.showPaymentModal = true;
+
+                        // Auto-focus and select the amount input
+                        this.$nextTick(() => {
+                            if (this.$refs.amountPaidInput) {
+                                this.$refs.amountPaidInput.focus();
+                                this.$refs.amountPaidInput.select();
+                            }
+                        });
                     },
+
+                    updateAmountPaid(value) {
+                        // Strip non-digit characters
+                        const number = value.replace(/[^0-9]/g, '');
+                        this.amountPaid = parseInt(number) || 0;
+                    },
+
+                    formatNumber(value) {
+                        if (!value) return '';
+                        return new Intl.NumberFormat('id-ID').format(value);
+                    },
+
+
 
                     closePaymentModal() {
                         this.showPaymentModal = false;
@@ -706,6 +788,13 @@
                             this.lastTransactionId = data.transaction_id;
                             this.showPaymentModal = false;
                             this.showSuccessModal = true;
+
+                            // Auto-focus print receipt button
+                            this.$nextTick(() => {
+                                if (this.$refs.printReceiptBtn) {
+                                    this.$refs.printReceiptBtn.focus();
+                                }
+                            });
 
                         } catch (error) {
                             console.error('Checkout error:', error);

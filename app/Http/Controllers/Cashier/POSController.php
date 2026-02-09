@@ -147,6 +147,15 @@ class POSController extends Controller
                     'category' => $product->category->name ?? '-',
                     'price' => $product->selling_price,
                     'stock' => $product->stock_on_hand,
+                    'base_unit' => $product->base_unit,
+                    'units' => $product->activeUnits->map(function ($unit) {
+                        return [
+                            'id' => $unit->id,
+                            'name' => $unit->unit_name,
+                            'conversion_rate' => $unit->conversion_rate,
+                            'selling_price' => $unit->selling_price,
+                        ];
+                    }),
                 ];
             });
 

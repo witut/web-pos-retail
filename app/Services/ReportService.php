@@ -280,7 +280,8 @@ class ReportService
      */
     public function getDailySalesSummary(string $startDate, string $endDate): array
     {
-        $salesData = Transaction::whereBetween('transaction_date', [$startDate, $endDate])
+        $salesData = Transaction::whereDate('transaction_date', '>=', $startDate)
+            ->whereDate('transaction_date', '<=', $endDate)
             ->completed()
             ->select(
                 DB::raw('DATE(transaction_date) as date'),
