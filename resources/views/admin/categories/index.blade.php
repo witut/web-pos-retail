@@ -56,7 +56,7 @@
                                     </svg>
                                 </a>
                                 <form method="POST" action="{{ route('admin.categories.destroy', $category) }}"
-                                    onsubmit="return confirm('Yakin ingin menghapus kategori ini?')">
+                                    onsubmit="return confirmDelete(event)">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="p-2 text-red-600 hover:bg-red-50 rounded-lg" title="Hapus">

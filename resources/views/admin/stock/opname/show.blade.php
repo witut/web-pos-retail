@@ -112,7 +112,7 @@
                         @foreach($opname->items as $item)
                             { physical: {{ $item->physical_stock }} },
                         @endforeach
-                    ],
+                        ],
 
                     matchesSearch(name, code) {
                         if (this.search === '') return true;
@@ -133,9 +133,20 @@
                     },
 
                     confirmFinalize() {
-                        if (confirm('Apakah Anda yakin ingin menyelesaikan opname ini? Stok sistem akan disesuaikan dengan stok fisik yang Anda input.')) {
-                            this.submitForm('finalize');
-                        }
+                        Swal.fire({
+                            title: 'Selesaikan Opname?',
+                            text: "Stok sistem akan disesuaikan dengan stok fisik yang Anda input. Tindakan ini tidak dapat dibatalkan!",
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonColor: '#3085d6',
+                            cancelButtonColor: '#d33',
+                            confirmButtonText: 'Ya, Selesaikan!',
+                            cancelButtonText: 'Batal'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                this.submitForm('finalize');
+                            }
+                        });
                     }
                 }));
             });

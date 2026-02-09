@@ -131,7 +131,7 @@
                                     </svg>
                                 </a>
                                 <form method="POST" action="{{ route('admin.products.destroy', $product) }}"
-                                    onsubmit="return confirm('Yakin ingin menghapus produk ini?')">
+                                    onsubmit="return confirmDelete(event)">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="p-2 text-red-600 hover:bg-red-50 rounded-lg" title="Hapus">
