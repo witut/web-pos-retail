@@ -196,7 +196,7 @@
                             <div class="flex items-center space-x-3">
                                 <input type="hidden" :name="'barcodes[' + index + '][id]'" x-model="barcode.id">
                                 <input type="text" :name="'barcodes[' + index + '][code]'" x-model="barcode.code"
-                                    placeholder="Masukkan barcode" required
+                                    placeholder="Masukkan barcode" required @keydown.enter.prevent
                                     class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                                 <label class="flex items-center">
                                     <input type="checkbox" :name="'barcodes[' + index + '][is_primary]'"
@@ -349,6 +349,12 @@
                             id: null,
                             code: '',
                             is_primary: this.barcodes.length === 0
+                        });
+                        this.$nextTick(() => {
+                            const inputs = document.querySelectorAll('input[name^="barcodes"][name$="[code]"]');
+                            if (inputs.length > 0) {
+                                inputs[inputs.length - 1].focus();
+                            }
                         });
                     },
 
