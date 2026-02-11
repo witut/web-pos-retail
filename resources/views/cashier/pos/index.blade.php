@@ -189,7 +189,8 @@
                             </button>
                         </template>
                     </div>
-                    <input type="number" x-model.number="amountPaid" placeholder="Ketik jumlah..."
+                    <input type="text" :value="formatNumber(amountPaid)" @input="updateAmountPaid($event.target.value)"
+                        placeholder="Ketik jumlah..."
                         class="w-full mt-2 px-3 py-2 border border-gray-300 rounded-lg text-right text-base font-medium focus:ring-2 focus:ring-slate-500">
                 </div>
 
@@ -919,6 +920,17 @@
                             minimumFractionDigits: 0,
                             maximumFractionDigits: 0
                         }).format(num);
+                    },
+
+                    formatNumber(value) {
+                        if (!value) return '';
+                        return new Intl.NumberFormat('id-ID').format(value);
+                    },
+
+                    updateAmountPaid(value) {
+                        // Remove non-numeric chars
+                        const numericValue = value.replace(/\D/g, '');
+                        this.amountPaid = numericValue ? parseInt(numericValue) : 0;
                     }
                 }
             }

@@ -126,9 +126,8 @@
                             <label class="block text-sm font-medium text-gray-700 mb-1">
                                 Harga Jual <span class="text-red-500">*</span>
                             </label>
-                            <input type="number" name="selling_price"
-                                value="{{ old('selling_price', $product->selling_price) }}" required step="0.01"
-                                min="0"
+                            <input type="hidden" name="selling_price" x-model="selling_price">
+                            <input type="text" :value="formattedSellingPrice" @input="updateSellingPrice($event.target.value)" required
                                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 @error('selling_price') border-red-500 @enderror">
                             @error('selling_price')
                                 <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
@@ -160,8 +159,8 @@
                             <label class="block text-sm font-medium text-gray-700 mb-1">
                                 HPP (Weighted Average)
                             </label>
-                            <input type="number" name="cost_price" value="{{ old('cost_price', $product->cost_price) }}"
-                                step="0.01" min="0"
+                            <input type="hidden" name="cost_price" x-model="cost_price">
+                            <input type="text" :value="formattedCostPrice" @input="updateCostPrice($event.target.value)"
                                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 @error('cost_price') border-red-500 @enderror">
                             <p class="text-xs text-gray-500 mt-1">Dapat diedit manual jika diperlukan</p>
                             @error('cost_price')
@@ -343,6 +342,24 @@
                     units: @json($unitsData),
                     imagePreview: null,
                     currentImage: '{{ $product->image_path ? asset('storage/' . $product->image_path) : '' }}',
+                    selling_price: '{{ old('selling_price', $product->selling_price) }}',
+                    cost_price: '{{ old('cost_price', $product->cost_price) }}',
+
+                    get formattedSellingPrice() {
+                        return this.selling_price ? new Intl.NumberFormat('id-ID').format(this.selling_price) : '';
+                    },
+
+                    updateSellingPrice(value) {
+                        this.selling_price = value.replace(/\D/g, '');
+                    },
+
+                    get formattedCostPrice() {
+                        return this.cost_price ? new Intl.NumberFormat('id-ID').format(this.cost_price) : '';
+                    },
+
+                    updateCostPrice(value) {
+                        this.cost_price = value.replace(/\D/g, '');
+                    },
 
                     addBarcode() {
                         this.barcodes.push({
