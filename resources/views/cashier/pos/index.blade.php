@@ -580,6 +580,7 @@
                         const price = parseInt(product.selling_price) || 0;
                         const stock = parseInt(product.stock_on_hand) || 0;
                         const baseUnit = product.base_unit || 'pcs';
+                        const productType = product.product_type || 'inventory';
 
                         // Prepare units array
                         let availableUnits = [{
@@ -604,7 +605,8 @@
                         const existing = this.cart.find(item => item.id === product.id && item.unit === baseUnit);
 
                         if (existing) {
-                            if (existing.qty < stock) {
+                            // Skip stock check for service products
+                            if (productType === 'service' || existing.qty < stock) {
                                 existing.qty++;
                                 existing.subtotal = Math.round(existing.qty * existing.price);
                             } else {
@@ -615,6 +617,7 @@
                                 id: product.id,
                                 sku: product.sku,
                                 name: product.name,
+                                product_type: productType,
                                 price: price,
                                 qty: 1,
                                 subtotal: price,

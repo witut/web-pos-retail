@@ -143,6 +143,11 @@ class StockService
     ): void {
         $product = Product::findOrFail($productId);
 
+        // Skip stock deduction for service products
+        if ($product->product_type === 'service') {
+            return;
+        }
+
         // Get conversion rate
         $conversionRate = $product->getConversionRate($unitName);
         $qtyInBaseUnit = $qty * $conversionRate;

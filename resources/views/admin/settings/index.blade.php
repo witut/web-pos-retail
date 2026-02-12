@@ -26,26 +26,51 @@
 
         <div x-data="{ tab: 'general' }" class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <!-- Tabs Header -->
-            <div class="flex border-b border-gray-100 bg-gray-50/50">
+            <div class="flex border-b border-gray-100 bg-gray-50/50 overflow-x-auto">
                 <button type="button" @click="tab = 'general'"
                     :class="tab === 'general' ? 'border-slate-800 text-slate-800 bg-white' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100'"
-                    class="flex-1 py-4 px-1 text-center border-b-2 font-medium text-sm transition-colors focus:outline-none">
+                    class="flex-shrink-0 py-4 px-4 text-center border-b-2 font-medium text-sm transition-colors focus:outline-none">
                     Umum
                 </button>
                 <button type="button" @click="tab = 'financial'"
                     :class="tab === 'financial' ? 'border-slate-800 text-slate-800 bg-white' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100'"
-                    class="flex-1 py-4 px-1 text-center border-b-2 font-medium text-sm transition-colors focus:outline-none">
+                    class="flex-shrink-0 py-4 px-4 text-center border-b-2 font-medium text-sm transition-colors focus:outline-none">
                     Keuangan
                 </button>
                 <button type="button" @click="tab = 'security'"
                     :class="tab === 'security' ? 'border-slate-800 text-slate-800 bg-white' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100'"
-                    class="flex-1 py-4 px-1 text-center border-b-2 font-medium text-sm transition-colors focus:outline-none">
+                    class="flex-shrink-0 py-4 px-4 text-center border-b-2 font-medium text-sm transition-colors focus:outline-none">
                     Keamanan
                 </button>
                 <button type="button" @click="tab = 'inventory'"
                     :class="tab === 'inventory' ? 'border-slate-800 text-slate-800 bg-white' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100'"
-                    class="flex-1 py-4 px-1 text-center border-b-2 font-medium text-sm transition-colors focus:outline-none">
+                    class="flex-shrink-0 py-4 px-4 text-center border-b-2 font-medium text-sm transition-colors focus:outline-none">
                     Inventaris
+                </button>
+                <button type="button" @click="tab = 'customer'"
+                    :class="tab === 'customer' ? 'border-slate-800 text-slate-800 bg-white' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100'"
+                    class="flex-shrink-0 py-4 px-4 text-center border-b-2 font-medium text-sm transition-colors focus:outline-none">
+                    Customer
+                </button>
+                <button type="button" @click="tab = 'discount'"
+                    :class="tab === 'discount' ? 'border-slate-800 text-slate-800 bg-white' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100'"
+                    class="flex-shrink-0 py-4 px-4 text-center border-b-2 font-medium text-sm transition-colors focus:outline-none">
+                    Diskon
+                </button>
+                <button type="button" @click="tab = 'shift'"
+                    :class="tab === 'shift' ? 'border-slate-800 text-slate-800 bg-white' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100'"
+                    class="flex-shrink-0 py-4 px-4 text-center border-b-2 font-medium text-sm transition-colors focus:outline-none">
+                    Shift
+                </button>
+                <button type="button" @click="tab = 'return'"
+                    :class="tab === 'return' ? 'border-slate-800 text-slate-800 bg-white' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100'"
+                    class="flex-shrink-0 py-4 px-4 text-center border-b-2 font-medium text-sm transition-colors focus:outline-none">
+                    Retur
+                </button>
+                <button type="button" @click="tab = 'printer'"
+                    :class="tab === 'printer' ? 'border-slate-800 text-slate-800 bg-white' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100'"
+                    class="flex-shrink-0 py-4 px-4 text-center border-b-2 font-medium text-sm transition-colors focus:outline-none">
+                    Printer
                 </button>
             </div>
 
@@ -53,145 +78,47 @@
             <div class="p-6">
                 <!-- General Tab -->
                 <div x-show="tab === 'general'" x-cloak>
-                    <div class="grid grid-cols-1 gap-6 max-w-3xl">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Nama Toko *</label>
-                            <input type="text" name="store_name"
-                                value="{{ old('store_name', $settings['store_name']) }}"
-                                class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 sm:text-sm"
-                                required>
-                            <p class="text-xs text-gray-500 mt-1">Nama ini akan dicetak di bagian atas struk belanja.
-                            </p>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Alamat Toko</label>
-                            <textarea name="store_address" rows="3"
-                                class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 sm:text-sm">{{ old('store_address', $settings['store_address']) }}</textarea>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Nomor Telepon</label>
-                            <input type="text" name="store_phone"
-                                value="{{ old('store_phone', $settings['store_phone']) }}"
-                                class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 sm:text-sm">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Footer Struk</label>
-                            <input type="text" name="receipt_footer"
-                                value="{{ old('receipt_footer', $settings['receipt_footer']) }}"
-                                class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 sm:text-sm">
-                            <p class="text-xs text-gray-500 mt-1">Pesan singkat di bagian bawah struk (contoh: Terima
-                                Kasih, Barang tidak dapat dikembalikan).</p>
-                        </div>
-                    </div>
+                    @include('admin.settings.tabs.general')
                 </div>
 
                 <!-- Financial Tab -->
                 <div x-show="tab === 'financial'" x-cloak>
-                    <div class="grid grid-cols-1 gap-6 max-w-3xl">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Simbol Mata Uang</label>
-                            <input type="text" name="currency_symbol"
-                                value="{{ old('currency_symbol', $settings['currency_symbol']) }}"
-                                class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 sm:text-sm sm:w-1/3">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Pajak (Tax Rate) % *</label>
-                            <div class="relative rounded-md shadow-sm sm:w-1/3">
-                                <input type="number" name="tax_rate" step="0.1" min="0" max="100"
-                                    value="{{ old('tax_rate', $settings['tax_rate']) }}"
-                                    class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 sm:text-sm pr-10"
-                                    required>
-                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                    <span class="text-gray-500 sm:text-sm">%</span>
-                                </div>
-                            </div>
-                            <p class="text-xs text-gray-500 mt-1">Persentase PPn yang dikenakan pada setiap transaksi.
-                            </p>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Tipe Pajak *</label>
-                            <div class="mt-2 space-y-2">
-                                <div class="flex items-center">
-                                    <input id="tax_type_exclusive" name="tax_type" type="radio" value="exclusive"
-                                        {{ old('tax_type', $settings['tax_type']) == 'exclusive' ? 'checked' : '' }}
-                                        class="focus:ring-slate-500 h-4 w-4 text-slate-600 border-gray-300">
-                                    <label for="tax_type_exclusive" class="ml-3 block text-sm font-medium text-gray-700">
-                                        Exclusive (Harga Belum Termasuk Pajak)
-                                    </label>
-                                </div>
-                                <p class="text-xs text-gray-500 ml-7">Harga Jual + PPN = Total Bayar</p>
-
-                                <div class="flex items-center">
-                                    <input id="tax_type_inclusive" name="tax_type" type="radio" value="inclusive"
-                                        {{ old('tax_type', $settings['tax_type']) == 'inclusive' ? 'checked' : '' }}
-                                        class="focus:ring-slate-500 h-4 w-4 text-slate-600 border-gray-300">
-                                    <label for="tax_type_inclusive" class="ml-3 block text-sm font-medium text-gray-700">
-                                        Inclusive (Harga Sudah Termasuk Pajak)
-                                    </label>
-                                </div>
-                                <p class="text-xs text-gray-500 ml-7">Harga Jual = Total Bayar (PPN dihitung dari harga jual)</p>
-                            </div>
-                        </div>
-                    </div>
+                    @include('admin.settings.tabs.financial')
                 </div>
 
                 <!-- Security Tab -->
                 <div x-show="tab === 'security'" x-cloak>
-                    <div class="grid grid-cols-1 gap-6 max-w-3xl">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Batasan Waktu Void (Jam)
-                                *</label>
-                            <input type="number" name="void_time_limit" min="0"
-                                value="{{ old('void_time_limit', $settings['void_time_limit']) }}"
-                                class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 sm:text-sm sm:w-1/3"
-                                required>
-                            <p class="text-xs text-gray-500 mt-1">Transaksi lama tidak dapat dibatalkan (void) setelah
-                                melewati batas waktu ini. (0 = Tidak ada batas)</p>
-                        </div>
-
-                        <div class="border-t pt-4">
-                            <h4 class="font-medium text-gray-800 mb-2">Keamanan PIN Kasir</h4>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Batas Percobaan
-                                        Gagal</label>
-                                    <input type="number" name="pin_attempt_limit" min="1" max="10"
-                                        value="{{ old('pin_attempt_limit', $settings['pin_attempt_limit']) }}"
-                                        class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 sm:text-sm">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Durasi Kunci
-                                        (Menit)</label>
-                                    <input type="number" name="pin_lockout_duration" min="1"
-                                        value="{{ old('pin_lockout_duration', $settings['pin_lockout_duration']) }}"
-                                        class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 sm:text-sm">
-                                </div>
-                            </div>
-                            <p class="text-xs text-gray-500 mt-1">Akun kasir akan dikunci sementara jika salah
-                                memasukkan PIN berulang kali.</p>
-                        </div>
-                    </div>
+                    @include('admin.settings.tabs.security')
                 </div>
 
                 <!-- Inventory Tab -->
                 <div x-show="tab === 'inventory'" x-cloak>
-                    <div class="grid grid-cols-1 gap-6 max-w-3xl">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Default Low Stock Threshold
-                                *</label>
-                            <input type="number" name="low_stock_threshold" min="0"
-                                value="{{ old('low_stock_threshold', $settings['low_stock_threshold']) }}"
-                                class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 sm:text-sm sm:w-1/3"
-                                required>
-                            <p class="text-xs text-gray-500 mt-1">Produk dianggap "Stok Menipis" jika jumlahnya di bawah
-                                angka ini (kecuali diatur spesifik per produk).</p>
-                        </div>
-                    </div>
+                    @include('admin.settings.tabs.inventory')
+                </div>
+
+                <!-- Customer Tab -->
+                <div x-show="tab === 'customer'" x-cloak>
+                    @include('admin.settings.tabs.customer')
+                </div>
+
+                <!-- Discount Tab -->
+                <div x-show="tab === 'discount'" x-cloak>
+                    @include('admin.settings.tabs.discount')
+                </div>
+
+                <!-- Shift Tab -->
+                <div x-show="tab === 'shift'" x-cloak>
+                    @include('admin.settings.tabs.shift')
+                </div>
+
+                <!-- Return Tab -->
+                <div x-show="tab === 'return'" x-cloak>
+                    @include('admin.settings.tabs.return')
+                </div>
+
+                <!-- Printer Tab -->
+                <div x-show="tab === 'printer'" x-cloak>
+                    @include('admin.settings.tabs.printer')
                 </div>
             </div>
 

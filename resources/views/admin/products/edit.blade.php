@@ -45,6 +45,32 @@
                             @enderror
                         </div>
 
+                        <!-- Product Type -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Tipe Produk <span class="text-red-500">*</span>
+                            </label>
+                            <div class="flex items-center space-x-6">
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="product_type" value="inventory" 
+                                        x-model="product_type"
+                                        {{ old('product_type', $product->product_type ?? 'inventory') == 'inventory' ? 'checked' : '' }}
+                                        class="w-4 h-4 text-slate-600 border-gray-300 focus:ring-slate-500">
+                                    <span class="ml-2 text-sm text-gray-700">Inventory (Barang)</span>
+                                </label>
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="product_type" value="service"
+                                        x-model="product_type"
+                                        {{ old('product_type', $product->product_type ?? 'inventory') == 'service' ? 'checked' : '' }}
+                                        class="w-4 h-4 text-slate-600 border-gray-300 focus:ring-slate-500">
+                                    <span class="ml-2 text-sm text-gray-700">Service (Jasa)</span>
+                                </label>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1" x-show="product_type === 'service'">
+                                💡 Produk jasa tidak memiliki stok fisik dan tidak akan dikurangi saat transaksi
+                            </p>
+                        </div>
+
                         <!-- Category -->
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">
@@ -121,39 +147,6 @@
                             @enderror
                         </div>
 
-                        <!-- Selling Price -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Harga Jual <span class="text-red-500">*</span>
-                            </label>
-                            <input type="hidden" name="selling_price" x-model="selling_price">
-                            <input type="text" :value="formattedSellingPrice" @input="updateSellingPrice($event.target.value)" required
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 @error('selling_price') border-red-500 @enderror">
-                            @error('selling_price')
-                                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                            @enderror
-                        </div>
-
-                        <!-- Current Stock (Read Only) -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Stok Saat Ini
-                            </label>
-                            <input type="text" value="{{ number_format($product->stock_on_hand, 2) }}" readonly
-                                class="w-full px-4 py-2 border border-gray-300 bg-gray-50 rounded-lg text-gray-600">
-                            <p class="text-xs text-gray-500 mt-1">Update via penerimaan/penjualan</p>
-                        </div>
-
-                        <!-- Min Stock Alert -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Minimum Stok Alert
-                            </label>
-                            <input type="number" name="min_stock_alert"
-                                value="{{ old('min_stock_alert', $product->min_stock_alert) }}" step="0.01" min="0"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                        </div>
-
                         <!-- Cost Price (HPP) -->
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">
@@ -168,6 +161,73 @@
                             @enderror
                         </div>
 
+                        <!-- Margin Calculator & Selling Price -->
+                        <div class="md:col-span-2">
+                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                <h4 class="text-sm font-medium text-gray-800 mb-3">💰 Kalkulator Harga Jual</h4>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <!-- Margin % -->
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                                            Margin (%)
+                                        </label>
+                                        <div class="relative">
+                                            <input type="number" x-model="margin_percent" 
+                                                @input="calculateSellingPriceFromMargin()"
+                                                step="0.01" min="0" placeholder="0"
+                                                class="w-full px-4 py-2 pr-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                            <span class="absolute right-3 top-2.5 text-gray-500">%</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Selling Price -->
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                                            Harga Jual <span class="text-red-500">*</span>
+                                        </label>
+                                        <input type="hidden" name="selling_price" x-model="selling_price">
+                                        <input type="text" :value="formattedSellingPrice" @input="updateSellingPriceAndMargin($event.target.value)" required
+                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 @error('selling_price') border-red-500 @enderror">
+                                        @error('selling_price')
+                                            <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                                        @enderror
+                                    </div>
+                                </div>
+                                <p class="text-xs text-blue-700 mt-2">
+                                    💡 Isi salah satu (Margin % atau Harga Jual), yang lain akan dihitung otomatis
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Current Stock (Read Only) -->
+                        <div x-show="product_type === 'inventory'">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Stok Saat Ini
+                            </label>
+                            <input type="text" value="{{ number_format($product->stock_on_hand, 2) }}" readonly
+                                class="w-full px-4 py-2 border border-gray-300 bg-gray-50 rounded-lg text-gray-600">
+                            <p class="text-xs text-gray-500 mt-1">Update via penerimaan/penjualan</p>
+                        </div>
+
+                        <!-- Service Note -->
+                        <div x-show="product_type === 'service'">
+                            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                                <p class="text-sm text-yellow-800">
+                                    🔧 <strong>Produk Jasa:</strong> Stok tidak dibatasi (unlimited)
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Min Stock Alert -->
+                        <div x-show="product_type === 'inventory'">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Minimum Stok Alert
+                            </label>
+                            <input type="number" name="min_stock_alert"
+                                value="{{ old('min_stock_alert', $product->min_stock_alert) }}" step="0.01" min="0"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+
                         <!-- Tax Rate -->
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">
@@ -176,6 +236,7 @@
                             <input type="number" name="tax_rate" value="{{ old('tax_rate', $product->tax_rate) }}"
                                 step="0.01" min="0" max="100"
                                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <p class="text-xs text-gray-500 mt-1">Default: 11%</p>
                         </div>
                     </div>
                 </div>
@@ -232,36 +293,72 @@
                         </button>
                     </div>
 
-                    <div class="space-y-3">
+                    <div class="space-y-4">
                         <template x-for="(unit, index) in units" :key="index">
-                            <div class="grid grid-cols-12 gap-3 items-center">
+                            <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
                                 <input type="hidden" :name="'units[' + index + '][id]'" x-model="unit.id">
-                                <div class="col-span-4">
-                                    <input type="text" :name="'units[' + index + '][name]'" x-model="unit.name"
-                                        placeholder="Nama unit (Box, Karton)" required
-                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <div class="grid grid-cols-12 gap-3 items-start">
+                                    <!-- Unit Name -->
+                                    <div class="col-span-12 md:col-span-3">
+                                        <label class="block text-xs font-medium text-gray-600 mb-1">Nama Unit</label>
+                                        <input type="text" :name="'units[' + index + '][name]'" x-model="unit.name"
+                                            placeholder="Box, Karton, Lusin" required
+                                            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                    </div>
+                                    
+                                    <!-- Conversion Rate -->
+                                    <div class="col-span-6 md:col-span-2">
+                                        <label class="block text-xs font-medium text-gray-600 mb-1">Konversi</label>
+                                        <input type="number" :name="'units[' + index + '][conversion_rate]'"
+                                            x-model="unit.conversion_rate" placeholder="12" required step="0.01"
+                                            min="0"
+                                            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                    </div>
+
+                                    <!-- Margin % -->
+                                    <div class="col-span-6 md:col-span-2">
+                                        <label class="block text-xs font-medium text-gray-600 mb-1">Margin %</label>
+                                        <input type="number" x-model="unit.margin_percent"
+                                            @input="calculateUnitSellingPrice(index)"
+                                            placeholder="0" step="0.01" min="0"
+                                            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                    </div>
+                                    
+                                    <!-- Selling Price -->
+                                    <div class="col-span-12 md:col-span-3">
+                                        <label class="block text-xs font-medium text-gray-600 mb-1">Harga Jual</label>
+                                        <input type="number" :name="'units[' + index + '][selling_price]'"
+                                            x-model="unit.selling_price"
+                                            @input="calculateUnitMargin(index)"
+                                            placeholder="0" required step="0.01" min="0"
+                                            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                    </div>
+
+                                    <!-- Barcode -->
+                                    <div class="col-span-10 md:col-span-2">
+                                        <label class="block text-xs font-medium text-gray-600 mb-1">Barcode</label>
+                                        <input type="text" :name="'units[' + index + '][barcode]'"
+                                            x-model="unit.barcode"
+                                            placeholder="Optional"
+                                            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                    </div>
+                                    
+                                    <!-- Remove Button -->
+                                    <div class="col-span-2 md:col-span-12 lg:col-span-1 flex items-end">
+                                        <button type="button" @click="removeUnit(index)"
+                                            class="w-full md:w-auto p-2 text-red-600 hover:bg-red-50 rounded-lg">
+                                            <svg class="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                    </div>
                                 </div>
-                                <div class="col-span-3">
-                                    <input type="number" :name="'units[' + index + '][conversion_rate]'"
-                                        x-model="unit.conversion_rate" placeholder="Konversi (12)" required step="0.01"
-                                        min="0"
-                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                                </div>
-                                <div class="col-span-4">
-                                    <input type="number" :name="'units[' + index + '][selling_price]'"
-                                        x-model="unit.selling_price" placeholder="Harga jual" required step="0.01"
-                                        min="0"
-                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                                </div>
-                                <div class="col-span-1">
-                                    <button type="button" @click="removeUnit(index)"
-                                        class="p-2 text-red-600 hover:bg-red-50 rounded-lg">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M6 18L18 6M6 6l12 12" />
-                                        </svg>
-                                    </button>
-                                </div>
+                                
+                                <!-- Helper Text -->
+                                <p class="text-xs text-gray-500 mt-2">
+                                    💡 Konversi: <span x-text="unit.conversion_rate || '?'"></span> × <span x-text="'{{ old('base_unit', $product->base_unit) }}'"></span> = 1 <span x-text="unit.name || 'unit'"></span>
+                                </p>
                             </div>
                         </template>
 
@@ -338,19 +435,33 @@
         <script>
             function productEditForm() {
                 return {
+                    product_type: '{{ old('product_type', $product->product_type ?? 'inventory') }}',
                     barcodes: @json($barcodesData),
                     units: @json($unitsData),
                     imagePreview: null,
                     currentImage: '{{ $product->image_path ? asset('storage/' . $product->image_path) : '' }}',
                     selling_price: '{{ old('selling_price', $product->selling_price) }}',
                     cost_price: '{{ old('cost_price', $product->cost_price) }}',
+                    margin_percent: 0,
+
+                    init() {
+                        // Calculate initial margin on load
+                        this.calculateMarginFromPrice();
+                        // Add margin_percent to existing units
+                        this.units = this.units.map(unit => ({
+                            ...unit,
+                            margin_percent: 0,
+                            barcode: unit.barcode || ''
+                        }));
+                    },
 
                     get formattedSellingPrice() {
                         return this.selling_price ? new Intl.NumberFormat('id-ID').format(this.selling_price) : '';
                     },
 
-                    updateSellingPrice(value) {
+                    updateSellingPriceAndMargin(value) {
                         this.selling_price = value.replace(/\D/g, '');
+                        this.calculateMarginFromPrice();
                     },
 
                     get formattedCostPrice() {
@@ -359,6 +470,56 @@
 
                     updateCostPrice(value) {
                         this.cost_price = value.replace(/\D/g, '');
+                        // Recalculate margin when cost price changes
+                        if (this.selling_price) {
+                            this.calculateMarginFromPrice();
+                        }
+                    },
+
+                    // Calculate selling price from margin %
+                    calculateSellingPriceFromMargin() {
+                        if (this.cost_price && this.margin_percent) {
+                            const cost = parseFloat(this.cost_price);
+                            const margin = parseFloat(this.margin_percent);
+                            this.selling_price = Math.round(cost * (1 + margin / 100));
+                        }
+                    },
+
+                    // Calculate margin % from selling price
+                    calculateMarginFromPrice() {
+                        if (this.cost_price && this.selling_price) {
+                            const cost = parseFloat(this.cost_price);
+                            const selling = parseFloat(this.selling_price);
+                            if (cost > 0) {
+                                this.margin_percent = (((selling - cost) / cost) * 100).toFixed(2);
+                            }
+                        }
+                    },
+
+                    // Calculate unit selling price from margin %
+                    calculateUnitSellingPrice(index) {
+                        const unit = this.units[index];
+                        if (this.cost_price && unit.conversion_rate && unit.margin_percent) {
+                            const cost = parseFloat(this.cost_price);
+                            const conversion = parseFloat(unit.conversion_rate);
+                            const margin = parseFloat(unit.margin_percent);
+                            const unitCost = cost * conversion;
+                            unit.selling_price = Math.round(unitCost * (1 + margin / 100));
+                        }
+                    },
+
+                    // Calculate unit margin % from selling price
+                    calculateUnitMargin(index) {
+                        const unit = this.units[index];
+                        if (this.cost_price && unit.conversion_rate && unit.selling_price) {
+                            const cost = parseFloat(this.cost_price);
+                            const conversion = parseFloat(unit.conversion_rate);
+                            const selling = parseFloat(unit.selling_price);
+                            const unitCost = cost * conversion;
+                            if (unitCost > 0) {
+                                unit.margin_percent = (((selling - unitCost) / unitCost) * 100).toFixed(2);
+                            }
+                        }
                     },
 
                     addBarcode() {
@@ -390,7 +551,9 @@
                             id: null,
                             name: '',
                             conversion_rate: '',
-                            selling_price: ''
+                            selling_price: '',
+                            barcode: '',
+                            margin_percent: 0
                         });
                     },
 

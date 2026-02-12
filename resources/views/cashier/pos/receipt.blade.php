@@ -188,7 +188,7 @@
                     <tr>
                         <td class="product-name">{{ Str::limit($item->product->name ?? $item->product_name, 15) }}</td>
                         <td class="qty">{{ number_format($item->qty) }}</td>
-                        <td class="price">{{ number_format($item->price) }}</td>
+                        <td class="price">{{ number_format($item->unit_price) }}</td>
                         <td class="subtotal">{{ number_format($item->subtotal) }}</td>
                     </tr>
                 @endforeach

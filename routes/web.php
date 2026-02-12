@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\Admin\ProductImportController;
 use App\Http\Controllers\Admin\SupplierController;
 use App\Http\Controllers\Admin\StockController;
 use App\Http\Controllers\Admin\ReportController;
@@ -33,6 +34,14 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 
     // Categories CRUD
     Route::resource('categories', CategoryController::class);
+
+    // Products Import/Export
+    Route::prefix('products')->name('products.')->group(function () {
+        Route::get('import', [ProductImportController::class, 'index'])->name('import');
+        Route::post('import', [ProductImportController::class, 'import']);
+        Route::get('export', [ProductImportController::class, 'export'])->name('export');
+        Route::get('import/template', [ProductImportController::class, 'downloadTemplate'])->name('import.template');
+    });
 
     // Products CRUD
     Route::resource('products', ProductController::class);

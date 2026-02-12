@@ -303,8 +303,8 @@ class TransactionService
             $conversionRate = $product->getConversionRate($unitName);
             $qtyInBaseUnit = $item['qty'] * $conversionRate;
 
-            // Check stock availability
-            if (!$product->hasStock($qtyInBaseUnit)) {
+            // Check stock availability (skip for service products)
+            if ($product->product_type === 'inventory' && !$product->hasStock($qtyInBaseUnit)) {
                 $availableInUnit = floor($product->stock_on_hand / $conversionRate);
                 throw new Exception("Stok {$product->name} tidak mencukupi (tersedia: {$availableInUnit} {$unitName})");
             }

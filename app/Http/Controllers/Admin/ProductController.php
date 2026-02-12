@@ -61,11 +61,12 @@ class ProductController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:200',
             'sku' => 'nullable|string|max:20|unique:products,sku',
+            'product_type' => 'required|in:inventory,service',
             'category_id' => 'required|exists:categories,id',
             'brand' => 'nullable|string|max:100',
             'base_unit' => 'required|string|max:20',
             'selling_price' => 'required|numeric|min:0',
-            'cost_price' => 'nullable|numeric|min:0', // Added cost_price
+            'cost_price' => 'nullable|numeric|min:0',
             'stock_on_hand' => 'nullable|numeric|min:0',
             'min_stock_alert' => 'nullable|numeric|min:0',
             'tax_rate' => 'nullable|numeric|min:0|max:100',
@@ -78,6 +79,7 @@ class ProductController extends Controller
             'units.*.name' => 'required|string',
             'units.*.conversion_rate' => 'required|numeric|min:0',
             'units.*.selling_price' => 'required|numeric|min:0',
+            'units.*.barcode' => 'nullable|string|unique:product_units,barcode',
         ]);
 
         DB::beginTransaction();
@@ -116,6 +118,7 @@ class ProductController extends Controller
                         'unit_name' => $unitData['name'],
                         'conversion_rate' => $unitData['conversion_rate'],
                         'selling_price' => $unitData['selling_price'],
+                        'barcode' => $unitData['barcode'] ?? null,
                         'is_base_unit' => false,
                         'is_active' => true,
                     ]);
@@ -169,11 +172,12 @@ class ProductController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:200',
             'sku' => 'required|string|max:20|unique:products,sku,' . $product->id,
+            'product_type' => 'required|in:inventory,service',
             'category_id' => 'required|exists:categories,id',
             'brand' => 'nullable|string|max:100',
             'base_unit' => 'required|string|max:20',
             'selling_price' => 'required|numeric|min:0',
-            'cost_price' => 'nullable|numeric|min:0', // Added cost_price
+            'cost_price' => 'nullable|numeric|min:0',
             'min_stock_alert' => 'nullable|numeric|min:0',
             'tax_rate' => 'nullable|numeric|min:0|max:100',
             'status' => 'required|in:active,inactive',
@@ -182,6 +186,7 @@ class ProductController extends Controller
             'barcodes' => 'nullable|array',
             'barcodes.*.code' => 'required|string',
             'units' => 'nullable|array',
+            'units.*.barcode' => 'nullable|string',
         ]);
 
         DB::beginTransaction();
@@ -219,6 +224,7 @@ class ProductController extends Controller
                         'unit_name' => $unitData['name'],
                         'conversion_rate' => $unitData['conversion_rate'],
                         'selling_price' => $unitData['selling_price'],
+                        'barcode' => $unitData['barcode'] ?? null,
                         'is_base_unit' => false,
                         'is_active' => true,
                     ]);

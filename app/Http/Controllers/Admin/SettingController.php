@@ -52,6 +52,7 @@ class SettingController extends Controller
 
         // List of allowed keys to update
         $allowedKeys = [
+            // General
             'store_name',
             'store_address',
             'store_phone',
@@ -62,7 +63,45 @@ class SettingController extends Controller
             'void_time_limit',
             'low_stock_threshold',
             'pin_attempt_limit',
-            'pin_lockout_duration'
+            'pin_lockout_duration',
+
+            // Customer
+            'customer.required',
+            'customer.loyalty_enabled',
+            'customer.points_earn_rate',
+            'customer.points_redeem_rate',
+            'customer.points_expiry_days',
+            'customer.points_with_discount',
+
+            // Discount
+            'discount.cashier_manual_allowed',
+            'discount.cashier_max_percent',
+            'discount.cashier_max_amount',
+            'discount.allow_stacking',
+            'discount.rounding',
+
+            // Shift
+            'shift.mode',
+            'shift.shifts_per_day',
+            'shift.require_opening_balance',
+            'shift.require_close_before_logout',
+            'shift.cash_variance_tolerance',
+            'shift.require_pin_on_variance',
+
+            // Return
+            'return.enabled',
+            'return.max_days',
+            'return.auto_approve_limit',
+            'return.refund_methods',
+            'return.restore_stock',
+            'return.require_photo',
+
+            // Printer
+            'printer.type',
+            'printer.server_url',
+            'printer.auto_cut',
+            'printer.open_drawer',
+            'printer.paper_width',
         ];
 
         // Track changes

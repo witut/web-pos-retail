@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
  * 
  * @property int $id
  * @property string $sku
+ * @property string $product_type (inventory, service)
  * @property string $name
  * @property string|null $description
  * @property int $category_id
@@ -37,6 +38,7 @@ class Product extends Model
 
     protected $fillable = [
         'sku',
+        'product_type',
         'name',
         'description',
         'category_id',

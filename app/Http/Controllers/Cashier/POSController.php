@@ -85,8 +85,8 @@ class POSController extends Controller
             return response()->json(['error' => 'Produk tidak ditemukan'], 404);
         }
 
-        // Check stock
-        if ($product->isOutOfStock()) {
+        // Check stock (skip for service products)
+        if ($product->product_type === 'inventory' && $product->isOutOfStock()) {
             return response()->json([
                 'error' => 'Produk out of stock',
                 'product' => [
@@ -102,6 +102,7 @@ class POSController extends Controller
                 'id' => $product->id,
                 'sku' => $product->sku,
                 'name' => $product->name,
+                'product_type' => $product->product_type,
                 'category' => $product->category->name ?? '-',
                 'selling_price' => $product->selling_price,
                 'cost_price' => $product->cost_price,
