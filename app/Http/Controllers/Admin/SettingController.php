@@ -71,6 +71,7 @@ class SettingController extends Controller
             'customer.points_earn_rate',
             'customer.points_redeem_rate',
             'customer.points_expiry_days',
+            'customer.points_min_transaction',
             'customer.points_with_discount',
 
             // Discount
@@ -102,6 +103,13 @@ class SettingController extends Controller
             'printer.auto_cut',
             'printer.open_drawer',
             'printer.paper_width',
+
+            // Backup
+            'backup_enabled',
+            'backup_time',
+            'backup_retention_days',
+            'backup_email_notification',
+            'backup_notification_email',
         ];
 
         // Track changes

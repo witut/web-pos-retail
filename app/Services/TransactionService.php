@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\Setting;
 use App\Models\AuditLog;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Exception;
 
 /**
@@ -23,6 +24,13 @@ use Exception;
  */
 class TransactionService
 {
+    protected CustomerService $customerService;
+
+    public function __construct(CustomerService $customerService)
+    {
+        $this->customerService = $customerService;
+    }
+
     /**
      * Create new transaction (Checkout process)
      * 
@@ -32,30 +40,43 @@ class TransactionService
      * - Deduct stock via StockService
      * - Create transaction + items
      * - Create stock movements
+     * - Handle customer points (if applicable)
      * 
      * @param array $cartItems Format: [['product_id' => 1, 'qty' => 2, 'unit_name' => 'pcs'], ...]
      * @param array $paymentData Format: ['method' => 'cash', 'amount_paid' => 100000]
      * @param int $cashierId
+     * @param int|null $customerId
+     * @param float $pointsDiscount
      * @return Transaction
      * @throws Exception
      */
-    public function createTransaction(array $cartItems, array $paymentData, int $cashierId): Transaction
-    {
+    public function createTransaction(
+        array $cartItems,
+        array $paymentData,
+        int $cashierId,
+        ?int $customerId = null,
+        float $pointsDiscount = 0,
+        int $pointsToRedeem = 0
+    ): Transaction {
         // Validate cart tidak kosong
         if (empty($cartItems)) {
             throw new Exception('Keranjang belanja kosong');
         }
 
-        return DB::transaction(function () use ($cartItems, $paymentData, $cashierId) {
+        return DB::transaction(function () use ($cartItems, $paymentData, $cashierId, $customerId, $pointsDiscount, $pointsToRedeem) {
 
             // 1. Validate & prepare items dengan HPP
             $preparedItems = $this->validateAndPrepareItems($cartItems);
 
             // 2. Calculate totals
             $totals = $this->calculateTotal($preparedItems);
+            // 2. Calculate totals
+            $totals = $this->calculateTotal($preparedItems);
+            $grandTotal = $totals['total'] - $pointsDiscount;
 
             // 3. Validate payment amount
-            if ($paymentData['amount_paid'] < $totals['total']) {
+            // Allow small float difference
+            if ($paymentData['amount_paid'] < round($grandTotal) - 1) {
                 throw new Exception('Jumlah pembayaran kurang dari total');
             }
 
@@ -63,24 +84,36 @@ class TransactionService
             $invoiceNumber = $this->generateInvoiceNumber();
 
             // 5. Calculate change
-            $changeAmount = $paymentData['amount_paid'] - $totals['total'];
+            $changeAmount = $paymentData['amount_paid'] - $grandTotal;
 
-            // 6. Create transaction record
+            // 6. Calculate points earned
+            $pointsEarned = 0;
+            if ($customerId) {
+                // Points calculated based on total after discount
+                $finalTotal = $totals['total'] - $pointsDiscount;
+                $pointsEarned = $this->customerService->calculatePointsEarned($finalTotal);
+            }
+
+            // 7. Create transaction record
             $transaction = Transaction::create([
                 'invoice_number' => $invoiceNumber,
                 'transaction_date' => now(),
                 'cashier_id' => $cashierId,
+                'customer_id' => $customerId,
                 'subtotal' => $totals['subtotal'],
                 'tax_amount' => $totals['tax_amount'],
                 'discount_amount' => 0, // Future feature
-                'total' => $totals['total'],
+                'points_discount_amount' => $pointsDiscount,
+                'total' => $totals['total'] - $pointsDiscount,
+                'points_earned' => $pointsEarned,
+                'points_redeemed' => $pointsToRedeem,
                 'payment_method' => $paymentData['method'],
                 'amount_paid' => $paymentData['amount_paid'],
                 'change_amount' => $changeAmount,
                 'status' => 'completed',
             ]);
 
-            // 7. Create transaction items & deduct stock
+            // 8. Create transaction items & deduct stock
             $stockService = new StockService();
 
             foreach ($preparedItems as $item) {

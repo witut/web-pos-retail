@@ -5,9 +5,12 @@ namespace App\Http\Controllers\Cashier;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\Transaction;
+use App\Models\Customer;
 use App\Models\Setting;
 use App\Models\User;
 use App\Services\TransactionService;
+use App\Services\CustomerService;
+use App\Services\SettingService;
 use Illuminate\Http\Request;
 
 /**
@@ -23,10 +26,17 @@ use Illuminate\Http\Request;
 class POSController extends Controller
 {
     protected TransactionService $transactionService;
+    protected CustomerService $customerService;
+    protected SettingService $settingService;
 
-    public function __construct(TransactionService $transactionService)
-    {
+    public function __construct(
+        TransactionService $transactionService,
+        CustomerService $customerService,
+        SettingService $settingService
+    ) {
         $this->transactionService = $transactionService;
+        $this->customerService = $customerService;
+        $this->settingService = $settingService;
     }
 
     /**
@@ -47,7 +57,10 @@ class POSController extends Controller
             ->take(10)
             ->get();
 
-        return view('cashier.pos.index', compact('taxRate', 'taxType', 'todayTransactions'));
+        // Get customer settings
+        $cashierCanCreate = $this->settingService->getBool('customer.cashier_can_create', true);
+
+        return view('cashier.pos.index', compact('taxRate', 'taxType', 'todayTransactions', 'cashierCanCreate'));
     }
 
     /**
@@ -180,6 +193,8 @@ class POSController extends Controller
             'items.*.unit_name' => 'required|string|max:20',
             'payment.method' => 'required|in:cash,card,qris,transfer',
             'payment.amount_paid' => 'required|numeric|min:0',
+            'customer_id' => 'nullable|exists:customers,id',
+            'points_to_redeem' => 'nullable|integer|min:0',
         ]);
 
         try {
@@ -199,12 +214,50 @@ class POSController extends Controller
                 'amount_paid' => $validated['payment']['amount_paid'],
             ];
 
+            // Handle customer and points
+            $customerId = $validated['customer_id'] ?? null;
+            $pointsToRedeem = $validated['points_to_redeem'] ?? 0;
+            $pointsDiscount = 0;
+
+            // Validate and process points redemption
+            if ($customerId && $pointsToRedeem > 0) {
+                $customer = Customer::findOrFail($customerId);
+
+                if ($pointsToRedeem > $customer->points_balance) {
+                    return response()->json([
+                        'success' => false,
+                        'error' => 'Poin tidak mencukupi'
+                    ], 400);
+                }
+
+                $pointsDiscount = $this->customerService->convertPointsToDiscount($pointsToRedeem);
+            }
+
             // Process transaction via service
             $transaction = $this->transactionService->createTransaction(
                 $cartItems,
                 $paymentData,
-                auth()->id()
+                auth()->id(),
+                $customerId,
+                $pointsDiscount,
+                $pointsToRedeem
             );
+
+            // Calculate and award points if customer selected
+            if ($customerId) {
+                $customer = Customer::find($customerId);
+
+                // Redeem points if any
+                if ($pointsToRedeem > 0) {
+                    $this->customerService->redeemPoints($customer, $pointsToRedeem, $transaction);
+                }
+
+                // Award points for this purchase
+                $this->customerService->earnPoints($customer, $transaction);
+
+                // Update total spent
+                $customer->increment('total_spent', $transaction->total);
+            }
 
             return response()->json([
                 'success' => true,

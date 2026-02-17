@@ -1,5 +1,5 @@
 <x-layouts.pos :title="'POS Terminal'">
-    <div class="h-full flex" x-data="posTerminal()" x-init="initPOS()" @keydown.window="handleKeyboard($event)">
+    <div class="h-full flex" x-data="posTerminal()" x-init="initPOS()" @keydown.window="handleKeyboard($event)" @points-updated.window="updatePoints($event.detail)" @customer-updated.window="updateCustomer($event.detail)">
         <!-- Left Panel: Product Search & Cart -->
         <div class="flex-1 flex flex-col p-4 space-y-4">
             <!-- Search Bar -->
@@ -51,6 +51,11 @@
                     <p class="text-red-700 text-sm" x-text="searchError"></p>
                 </div>
             </div>
+
+            {{-- Customer Selection Component --}}
+            @include('cashier.pos._customer-component', [
+                'cashierCanCreate' => $cashierCanCreate
+            ])
 
             <!-- Cart Table -->
             <div class="flex-1 bg-white rounded-xl shadow-sm overflow-hidden flex flex-col">
@@ -166,6 +171,10 @@
                         <span>Subtotal</span>
                         <span class="font-medium" x-text="formatCurrency(subtotal)"></span>
                     </div>
+                    <div x-show="pointsDiscount > 0" class="flex justify-between text-green-600">
+                        <span>Diskon Poin</span>
+                        <span class="font-medium">-<span x-text="formatCurrency(pointsDiscount)"></span></span>
+                    </div>
                     <div class="flex justify-between text-gray-600">
                         <span>PPN ({{ $taxRate ?? 0 }}%)</span>
                         <span class="font-medium" x-text="formatCurrency(taxAmount)"></span>
@@ -173,7 +182,7 @@
                     <div class="border-t-2 border-gray-200 pt-3">
                         <div class="flex justify-between text-xl font-bold text-gray-800">
                             <span>TOTAL</span>
-                            <span class="text-slate-700" x-text="formatCurrency(grandTotal)"></span>
+                            <span class="text-slate-700" x-text="formatCurrency(finalTotal)"></span>
                         </div>
                     </div>
                 </div>
@@ -271,8 +280,16 @@
                     <!-- Amount Summary -->
                     <div class="bg-gray-50 rounded-xl p-4 space-y-2">
                         <div class="flex justify-between">
-                            <span class="text-gray-600">Total Belanja</span>
-                            <span class="font-bold text-lg" x-text="formatCurrency(grandTotal)"></span>
+                            <span class="text-gray-600">Subtotal</span>
+                            <span class="font-medium" x-text="formatCurrency(grandTotal)"></span>
+                        </div>
+                        <div x-show="pointsDiscount > 0" class="flex justify-between text-green-600">
+                            <span>Diskon Poin</span>
+                            <span class="font-medium">-<span x-text="formatCurrency(pointsDiscount)"></span></span>
+                        </div>
+                        <div class="flex justify-between border-t pt-2">
+                            <span class="text-gray-800 font-bold">TOTAL BAYAR</span>
+                            <span class="font-bold text-xl" x-text="formatCurrency(finalTotal)"></span>
                         </div>
                         <div class="flex justify-between" x-show="paymentMethod === 'cash'">
                             <span class="text-gray-600">Uang Diterima</span>
@@ -365,6 +382,190 @@
 
     @push('scripts')
         <script>
+            /* Customer Component for POS */
+            console.log('LOADING CUSTOMER COMPONENT SCRIPT INLINED');
+
+            function customerComponent() {
+                return {
+                    // Customer Data
+                    selectedCustomer: null,
+                    customerSearch: '',
+                    customerResults: [],
+                    customerSearchFocused: false,
+
+                    // Points Management
+                    pointsToRedeem: 0,
+                    pointsDiscount: 0,
+                    tempPointsDiscount: 0,
+                    redeemAmount: 0,
+
+                    // Quick Add
+                    showQuickAddModal: false,
+                    newCustomer: {
+                        name: '',
+                        phone: ''
+                    },
+                    isQuickAdding: false,
+                    quickAddError: '',
+
+                    // Redeem Modal
+                    showRedeemModal: false,
+                    redeemError: '',
+
+                    // Customer Search
+                    async searchCustomers() {
+                        if (this.customerSearch.length < 2) {
+                            this.customerResults = [];
+                            return;
+                        }
+
+                        try {
+                            const response = await fetch(`/pos/customers/search?q=${encodeURIComponent(this.customerSearch)}`);
+                            const data = await response.json();
+                            this.customerResults = data;
+                        } catch (error) {
+                            console.error('Customer search error:', error);
+                            this.customerResults = [];
+                        }
+                    },
+
+                    selectCustomer(customer) {
+                        this.selectedCustomer = customer;
+                        this.customerSearch = '';
+                        this.customerResults = [];
+                        this.customerSearchFocused = false;
+                        
+                        // Reset points on customer change
+                        this.pointsToRedeem = 0;
+                        this.pointsDiscount = 0;
+                        this.$dispatch('points-updated', { discount: 0, redeem: 0 });
+                        this.$dispatch('customer-updated', { customer: customer });
+                    },
+
+                    clearCustomer() {
+                        this.selectedCustomer = null;
+                        this.pointsToRedeem = 0;
+                        this.pointsDiscount = 0;
+                        this.$dispatch('points-updated', { discount: 0, redeem: 0 });
+                        this.$dispatch('customer-updated', { customer: null });
+                    },
+
+                    // Quick Add Customer
+                    openQuickAddModal() {
+                        this.showQuickAddModal = true;
+                        this.newCustomer = { name: '', phone: '' };
+                        this.quickAddError = '';
+                        this.$nextTick(() => {
+                            if (this.$refs.quickAddNameInput) {
+                                this.$refs.quickAddNameInput.focus();
+                            }
+                        });
+                    },
+
+                    closeQuickAddModal() {
+                        this.showQuickAddModal = false;
+                        this.newCustomer = { name: '', phone: '' };
+                        this.quickAddError = '';
+                    },
+
+                    async saveNewCustomer() {
+                        if (!this.newCustomer.name || !this.newCustomer.phone) {
+                            this.quickAddError = 'Nama dan No. HP wajib diisi';
+                            return;
+                        }
+
+                        this.isQuickAdding = true;
+                        this.quickAddError = '';
+
+                        try {
+                            const response = await fetch('/pos/customers/quick-add', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                                },
+                                body: JSON.stringify(this.newCustomer)
+                            });
+
+                            const data = await response.json();
+
+                            if (!response.ok) {
+                                this.quickAddError = data.message || 'Gagal menambahkan pelanggan';
+                                return;
+                            }
+
+                            this.selectedCustomer = data.customer;
+                            this.$dispatch('points-updated', { discount: 0, redeem: 0 });
+                            this.$dispatch('customer-updated', { customer: data.customer });
+                            this.closeQuickAddModal();
+
+                        } catch (error) {
+                            this.quickAddError = 'Terjadi kesalahan: ' + error.message;
+                            console.error(error);
+                        } finally {
+                            this.isQuickAdding = false;
+                        }
+                    },
+
+                    // Redeem Points
+                    openRedeemModal() {
+                        this.showRedeemModal = true;
+                        this.redeemAmount = 0;
+                        this.tempPointsDiscount = 0;
+                        this.redeemError = '';
+                    },
+
+                    closeRedeemModal() {
+                        this.showRedeemModal = false;
+                        this.redeemAmount = 0;
+                        this.tempPointsDiscount = 0;
+                        this.redeemError = '';
+                    },
+
+                    calculateRedeemDiscount() {
+                        if (!this.redeemAmount || this.redeemAmount <= 0) {
+                            this.tempPointsDiscount = 0;
+                            return;
+                        }
+                        // Rate: 100 points = Rp 10,000 (configurable via settings)
+                        // Simplified: 1 point = Rp 100
+                        this.tempPointsDiscount = this.redeemAmount * 100;
+                    },
+
+                    confirmRedeemPoints() {
+                        if (!this.redeemAmount || this.redeemAmount <= 0) {
+                            this.redeemError = 'Masukkan jumlah poin';
+                            return;
+                        }
+
+                        if (this.redeemAmount > (this.selectedCustomer?.points_balance || 0)) {
+                            this.redeemError = 'Poin tidak mencukupi';
+                            return;
+                        }
+
+                        this.pointsToRedeem = this.redeemAmount;
+                        this.pointsDiscount = this.tempPointsDiscount;
+                        this.$dispatch('points-updated', { discount: this.pointsDiscount, redeem: this.pointsToRedeem });
+                        this.closeRedeemModal();
+                    },
+
+                    // Utility
+                    formatCurrency(value) {
+                        const num = parseInt(value) || 0;
+                        return 'Rp ' + new Intl.NumberFormat('id-ID', {
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0
+                        }).format(num);
+                    },
+
+                    formatNumber(value) {
+                        if (!value) return '0';
+                        return new Intl.NumberFormat('id-ID').format(value);
+                    }
+                }
+            }
+        </script>
+        <script>
             function posTerminal() {
                 return {
                     // Data
@@ -390,6 +591,11 @@
                     confirmTitle: '',
                     confirmMessage: '',
                     confirmAction: null,
+
+                    // Points Data (from event)
+                    pointsDiscount: 0,
+                    pointsToRedeem: 0,
+                    customerId: null,
 
                     // localStorage key for cart persistence
                     storageKey: 'pos_cart_data',
@@ -482,10 +688,20 @@
                         return Math.round(this.subtotal + this.taxAmount);
                     },
                     get change() {
-                        return Math.round(parseInt(this.amountPaid || 0) - this.grandTotal);
+                        return Math.round(parseInt(this.amountPaid || 0) - this.finalTotal);
+                    },
+                    get finalTotal() {
+                        return Math.max(0, Math.round(this.grandTotal - this.pointsDiscount));
                     },
 
                     // Methods
+                    updatePoints(detail) {
+                        this.pointsDiscount = detail.discount || 0;
+                        this.pointsToRedeem = detail.redeem || 0;
+                    },
+                    updateCustomer(detail) {
+                        this.customerId = detail.customer ? detail.customer.id : null;
+                    },
                     handleSearchEnter() {
                         // Jika ada autocomplete dan ada item terpilih, pilih item tersebut
                         if (this.autocompleteResults.length > 0 && this.autocompleteIndex >= 0) {
@@ -768,8 +984,8 @@
 
                     openPaymentModal() {
                         if (this.cart.length === 0) return;
-                        if (this.amountPaid < this.grandTotal && this.paymentMethod === 'cash') {
-                            this.amountPaid = this.grandTotal;
+                        if (this.amountPaid < this.finalTotal && this.paymentMethod === 'cash') {
+                            this.amountPaid = this.finalTotal;
                         }
                         this.showPaymentModal = true;
 
@@ -820,8 +1036,10 @@
                                     method: this.paymentMethod,
                                     amount_paid: this.paymentMethod === 'cash'
                                         ? parseInt(this.amountPaid)
-                                        : this.grandTotal
-                                }
+                                        : this.finalTotal
+                                },
+                                customer_id: this.customerId,
+                                points_to_redeem: this.pointsToRedeem
                             };
 
                             console.log('Sending checkout:', payload);
@@ -935,8 +1153,10 @@
                         const numericValue = value.replace(/\D/g, '');
                         this.amountPaid = numericValue ? parseInt(numericValue) : 0;
                     }
-                }
+                };
             }
+
+            console.log('POS Script Loaded');
         </script>
     @endpush
 </x-layouts.pos>

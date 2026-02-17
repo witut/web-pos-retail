@@ -168,6 +168,12 @@
                     <td>Kasir</td>
                     <td>: {{ $transaction->cashier->name ?? '-' }}</td>
                 </tr>
+                @if ($transaction->customer)
+                    <tr>
+                        <td>Pelanggan</td>
+                        <td>: {{ $transaction->customer->name }}</td>
+                    </tr>
+                @endif
             </table>
         </div>
 
@@ -215,6 +221,12 @@
                     <td class="value">-Rp {{ number_format($transaction->discount_amount) }}</td>
                 </tr>
             @endif
+            @if ($transaction->points_discount_amount > 0)
+                <tr>
+                    <td class="label">Diskon Poin</td>
+                    <td class="value">-Rp {{ number_format($transaction->points_discount_amount) }}</td>
+                </tr>
+            @endif
             <tr class="grand-total">
                 <td class="label"><strong>TOTAL</strong></td>
                 <td class="value"><strong>Rp {{ number_format($transaction->total) }}</strong></td>
@@ -234,6 +246,32 @@
                 </tr>
             </table>
         </div>
+
+        @if ($transaction->customer)
+            <div class="separator"></div>
+            <!-- Loyalty Info -->
+            <div class="invoice-info">
+                <strong>Info Poin Member</strong>
+                <table>
+                    @if ($transaction->points_earned > 0)
+                        <tr>
+                            <td>Poin Didapat</td>
+                            <td style="text-align: right">+{{ number_format($transaction->points_earned) }}</td>
+                        </tr>
+                    @endif
+                    @if ($transaction->points_redeemed > 0)
+                        <tr>
+                            <td>Poin Ditukar</td>
+                            <td style="text-align: right">-{{ number_format($transaction->points_redeemed) }}</td>
+                        </tr>
+                    @endif
+                    <tr>
+                        <td>Sisa Poin</td>
+                        <td style="text-align: right">{{ number_format($transaction->customer->points_balance) }}</td>
+                    </tr>
+                </table>
+            </div>
+        @endif
 
         <!-- Footer -->
         <div class="footer">

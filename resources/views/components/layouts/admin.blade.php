@@ -101,6 +101,19 @@
                         :class="sidebarOpen ? 'opacity-100' : 'opacity-0 hidden'">Supplier</span>
                 </a>
 
+                <a href="{{ route('admin.customers.index') }}"
+                    class="flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all group whitespace-nowrap
+                          {{ request()->routeIs('admin.customers.*') ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white' }}"
+                    title="Customers">
+                    <svg class="w-5 h-5 flex-shrink-0 transition-colors" :class="sidebarOpen ? 'mr-3' : 'mr-0 mx-auto'"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    <span class="font-medium transition-opacity duration-300"
+                        :class="sidebarOpen ? 'opacity-100' : 'opacity-0 hidden'">Pelanggan</span>
+                </a>
+
                 <!-- INVENTORY Group -->
                 <div class="mt-6 mb-3 transition-opacity duration-300"
                     :class="sidebarOpen ? 'px-3 opacity-100' : 'px-0 opacity-0 hidden'">
@@ -212,6 +225,19 @@
                         :class="sidebarOpen ? 'opacity-100' : 'opacity-0 hidden'">Pengguna</span>
                 </a>
 
+                <a href="{{ route('admin.backups.index') }}"
+                    class="flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all group whitespace-nowrap
+                        {{ request()->routeIs('admin.backups.*') ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white' }}"
+                    title="Backup Database">
+                    <svg class="w-5 h-5 flex-shrink-0 transition-colors" :class="sidebarOpen ? 'mr-3' : 'mr-0 mx-auto'"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                    </svg>
+                    <span class="font-medium transition-opacity duration-300"
+                        :class="sidebarOpen ? 'opacity-100' : 'opacity-0 hidden'">Backup</span>
+                </a>
+
                 <a href="{{ route('admin.settings.index') }}"
                     class="flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all group whitespace-nowrap
                         {{ request()->routeIs('admin.settings.*') ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white' }}"
@@ -264,8 +290,12 @@
                 class="h-16 bg-white border-b border-gray-200 flex flex-shrink-0 items-center justify-between px-6 z-10">
                 <h1 class="text-xl font-semibold text-gray-800">{{ $title ?? 'Dashboard' }}</h1>
 
+
                 <div class="flex items-center space-x-4">
-                    <!-- POS Button -->
+                    {{-- Notification Bell --}}
+                    @include('components.notification-bell')
+
+                    {{-- POS Button --}}
                     <a href="{{ route('pos.index') }}"
                         class="inline-flex items-center px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-medium rounded-lg transition-colors shadow-sm border border-slate-700">
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -58,12 +58,21 @@ class ReportService
 
         $growth = $yesterdaySales > 0 ? (($todaySales - $yesterdaySales) / $yesterdaySales) * 100 : 100;
 
+        // 4. Customer Stats
+        $totalCustomers = DB::table('customers')->whereNull('deleted_at')->count();
+        $newCustomersThisMonth = DB::table('customers')
+            ->whereNull('deleted_at')
+            ->whereBetween('created_at', [Carbon::now()->startOfMonth(), Carbon::now()->endOfMonth()])
+            ->count();
+
         return [
             'today_sales' => $todaySales,
             'today_transactions' => $todayCount,
             'today_profit' => $todayProfit,
             'low_stock_count' => $lowStockCount,
-            'growth_percentage' => round($growth, 1)
+            'growth_percentage' => round($growth, 1),
+            'total_customers' => $totalCustomers,
+            'new_customers_this_month' => $newCustomersThisMonth,
         ];
     }
     /**
@@ -436,6 +445,106 @@ class ReportService
             'summary' => $summary,
             'daily_breakdown' => array_values($dailyBreakdown), // Reset keys for JSON
             'transactions' => $transactions // Optional: if we want drilldown
+        ];
+    }
+    /**
+     * Get customer report (List of customers with stats)
+     * 
+     * @param string $startDate
+     * @param string $endDate
+     * @return array
+     */
+    public function getCustomerReport(string $startDate, string $endDate): array
+    {
+        // Get customers who have transactions in the period
+        $customers = DB::table('customers')
+            ->join('transactions', 'customers.id', '=', 'transactions.customer_id')
+            ->whereBetween('transactions.transaction_date', [$startDate, $endDate])
+            ->where('transactions.status', 'completed')
+            ->select(
+                'customers.id',
+                'customers.name',
+                'customers.phone',
+                'customers.points_balance',
+                DB::raw('COUNT(transactions.id) as total_transactions'),
+                DB::raw('SUM(transactions.total) as total_spent'),
+                DB::raw('MAX(transactions.transaction_date) as last_transaction'),
+                DB::raw('SUM(transactions.points_earned) as points_earned'),
+                DB::raw('SUM(transactions.points_redeemed) as points_redeemed')
+            )
+            ->groupBy('customers.id', 'customers.name', 'customers.phone', 'customers.points_balance')
+            ->orderByDesc('total_spent')
+            ->get();
+
+        $summary = [
+            'total_customers' => $customers->unique('id')->count(),
+            'total_transactions' => $customers->sum('total_transactions'),
+            'total_spent' => $customers->sum('total_spent'),
+            'total_points_earned' => $customers->sum('points_earned'),
+            'total_points_redeemed' => $customers->sum('points_redeemed'),
+        ];
+
+        return [
+            'summary' => $summary,
+            'customers' => $customers
+        ];
+    }
+
+    /**
+     * Get top spending customers
+     * 
+     * @param string $startDate
+     * @param string $endDate
+     * @param int $limit
+     * @return \Illuminate\Support\Collection
+     */
+    public function getTopCustomers(string $startDate, string $endDate, int $limit = 5)
+    {
+        return DB::table('customers')
+            ->join('transactions', 'customers.id', '=', 'transactions.customer_id')
+            ->whereBetween('transactions.transaction_date', [$startDate, $endDate])
+            ->where('transactions.status', 'completed')
+            ->select(
+                'customers.id',
+                'customers.name',
+                DB::raw('SUM(transactions.total) as total_spent'),
+                DB::raw('COUNT(transactions.id) as transaction_count')
+            )
+            ->groupBy('customers.id', 'customers.name')
+            ->orderByDesc('total_spent')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * Get points redemption report
+     * 
+     * @param string $startDate
+     * @param string $endDate
+     * @return array
+     */
+    public function getPointsReport(string $startDate, string $endDate): array
+    {
+        $transactions = Transaction::whereBetween('transaction_date', [$startDate, $endDate])
+            ->completed()
+            ->whereNotNull('customer_id')
+            ->where(function ($q) {
+                $q->where('points_earned', '>', 0)
+                    ->orWhere('points_redeemed', '>', 0);
+            })
+            ->with('customer')
+            ->get();
+
+        $summary = [
+            'total_earned' => $transactions->sum('points_earned'),
+            'total_redeemed' => $transactions->sum('points_redeemed'),
+            'redemption_value' => $transactions->sum('points_discount_amount'),
+            'customers_participating' => $transactions->unique('customer_id')->count()
+        ];
+
+        return [
+            'summary' => $summary,
+            'transactions' => $transactions
         ];
     }
 }

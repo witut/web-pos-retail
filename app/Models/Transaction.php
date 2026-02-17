@@ -43,6 +43,7 @@ class Transaction extends Model
         'invoice_number',
         'transaction_date',
         'cashier_id',
+        'customer_id',
         'subtotal',
         'tax_amount',
         'discount_amount',
@@ -56,6 +57,9 @@ class Transaction extends Model
         'voided_by',
         'voided_at',
         'notes',
+        'points_earned',
+        'points_redeemed',
+        'points_discount_amount',
     ];
 
     protected $casts = [
@@ -67,6 +71,9 @@ class Transaction extends Model
         'amount_paid' => 'decimal:2',
         'change_amount' => 'decimal:2',
         'voided_at' => 'datetime',
+        'points_earned' => 'integer',
+        'points_redeemed' => 'integer',
+        'points_discount_amount' => 'decimal:2',
     ];
 
     /*
@@ -83,6 +90,16 @@ class Transaction extends Model
     public function cashier()
     {
         return $this->belongsTo(User::class, 'cashier_id');
+    }
+
+    /**
+     * Get customer yang melakukan transaksi ini (optional)
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function customer()
+    {
+        return $this->belongsTo(Customer::class, 'customer_id');
     }
 
     /**

@@ -72,6 +72,11 @@
                     class="flex-shrink-0 py-4 px-4 text-center border-b-2 font-medium text-sm transition-colors focus:outline-none">
                     Printer
                 </button>
+                <button type="button" @click="tab = 'backup'"
+                    :class="tab === 'backup' ? 'border-slate-800 text-slate-800 bg-white' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-100'"
+                    class="flex-shrink-0 py-4 px-4 text-center border-b-2 font-medium text-sm transition-colors focus:outline-none">
+                    Backup
+                </button>
             </div>
 
             <!-- Tab Contents -->
@@ -116,9 +121,15 @@
                     @include('admin.settings.tabs.return')
                 </div>
 
+
                 <!-- Printer Tab -->
                 <div x-show="tab === 'printer'" x-cloak>
                     @include('admin.settings.tabs.printer')
+                </div>
+
+                <!-- Backup Tab -->
+                <div x-show="tab === 'backup'" x-cloak>
+                    @include('admin.settings.tabs.backup')
                 </div>
             </div>
 

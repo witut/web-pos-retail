@@ -92,6 +92,40 @@ class ReportController extends Controller
     }
 
     /**
+     * Laporan Pelanggan (Customer Report)
+     */
+    public function customers(Request $request)
+    {
+        $startDate = $request->input('start_date', Carbon::today()->startOfMonth()->format('Y-m-d'));
+        $endDate = $request->input('end_date', Carbon::today()->endOfMonth()->format('Y-m-d'));
+
+        $data = $this->reportService->getCustomerReport($startDate, $endDate);
+        $topCustomers = $this->reportService->getTopCustomers($startDate, $endDate, 5);
+
+        return view('admin.reports.customers', array_merge($data, [
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+            'topCustomers' => $topCustomers
+        ]));
+    }
+
+    /**
+     * Laporan Poin Loyalty (Points Report)
+     */
+    public function points(Request $request)
+    {
+        $startDate = $request->input('start_date', Carbon::today()->startOfMonth()->format('Y-m-d'));
+        $endDate = $request->input('end_date', Carbon::today()->endOfMonth()->format('Y-m-d'));
+
+        $data = $this->reportService->getPointsReport($startDate, $endDate);
+
+        return view('admin.reports.points', array_merge($data, [
+            'startDate' => $startDate,
+            'endDate' => $endDate
+        ]));
+    }
+
+    /**
      * Export Reports (Excel/PDF)
      */
     public function export(Request $request)

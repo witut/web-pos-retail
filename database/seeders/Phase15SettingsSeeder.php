@@ -45,10 +45,34 @@ class Phase15SettingsSeeder extends Seeder
                 'description' => 'Masa berlaku poin (hari, 0 = tidak ada batas)'
             ],
             [
+                'key' => 'customer.points_min_transaction',
+                'value' => '0',
+                'group' => 'customer',
+                'description' => 'Minimal total belanja untuk dapat poin'
+            ],
+            [
                 'key' => 'customer.points_with_discount',
                 'value' => '1',
                 'group' => 'customer',
                 'description' => 'Poin bisa digunakan bersamaan dengan diskon'
+            ],
+            [
+                'key' => 'customer.cashier_can_create',
+                'value' => '1',
+                'group' => 'customer',
+                'description' => 'Izinkan kasir untuk menambahkan pelanggan baru di POS'
+            ],
+            [
+                'key' => 'customer.cashier_limit_enabled',
+                'value' => '0',
+                'group' => 'customer',
+                'description' => 'Aktifkan pembatasan jumlah pelanggan baru per hari per kasir'
+            ],
+            [
+                'key' => 'customer.cashier_daily_limit',
+                'value' => '20',
+                'group' => 'customer',
+                'description' => 'Maksimal pelanggan baru yang bisa dibuat kasir per hari'
             ],
 
             // Discount Settings
