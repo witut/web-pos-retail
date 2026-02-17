@@ -107,6 +107,10 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 
     // Customers
     Route::resource('customers', \App\Http\Controllers\Admin\CustomerController::class);
+
+    // Promotions
+    Route::resource('promotions', \App\Http\Controllers\Admin\PromotionController::class);
+    Route::resource('coupons', \App\Http\Controllers\Admin\CouponController::class);
 });
 
 /*
@@ -135,6 +139,7 @@ Route::middleware(['auth', 'role:cashier,admin'])->prefix('pos')->name('pos.')->
 
 
     // Checkout
+    Route::post('/calculate', [POSController::class, 'calculate'])->name('calculate');
     Route::post('/checkout', [POSController::class, 'checkout'])->name('checkout');
 
     // Transaction history

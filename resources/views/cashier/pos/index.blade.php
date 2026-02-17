@@ -125,8 +125,19 @@
                                             </button>
                                         </div>
                                     </td>
-                                    <td class="px-4 py-3 text-right text-sm" x-text="formatCurrency(item.price)"></td>
-                                    <td class="px-4 py-3 text-right font-medium" x-text="formatCurrency(item.subtotal)">
+                                    <td class="px-4 py-3 text-right text-sm">
+                                        <div x-show="item.discount_amount > 0">
+                                            <div class="line-through text-gray-400 text-xs" x-text="formatCurrency(item.selling_price || item.price)"></div>
+                                            <div class="font-medium text-green-600" x-text="formatCurrency((item.selling_price || item.price) - (item.discount_amount / item.qty))"></div>
+                                        </div>
+                                        <div x-show="!item.discount_amount" x-text="formatCurrency(item.selling_price || item.price)"></div>
+                                    </td>
+                                    <td class="px-4 py-3 text-right font-medium">
+                                        <div x-show="item.discount_amount > 0">
+                                            <div class="line-through text-gray-400 text-xs" x-text="formatCurrency(item.subtotal)"></div>
+                                            <div class="text-green-600" x-text="formatCurrency(item.subtotal - item.discount_amount)"></div>
+                                        </div>
+                                        <div x-show="!item.discount_amount" x-text="formatCurrency(item.subtotal)"></div>
                                     </td>
                                     <td class="px-4 py-3">
                                         <button @click="removeItem(index)"
@@ -175,6 +186,16 @@
                         <span>Diskon Poin</span>
                         <span class="font-medium">-<span x-text="formatCurrency(pointsDiscount)"></span></span>
                     </div>
+                    <div x-show="promotionDiscount > 0" class="flex justify-between text-blue-600">
+                        <span>Diskon Promosi</span>
+                        <span class="font-medium">-<span x-text="formatCurrency(promotionDiscount)"></span></span>
+                    </div>
+                    <template x-for="promo in appliedPromotions" :key="promo.id">
+                        <div class="flex justify-between text-xs text-blue-500 italic px-2">
+                            <span x-text="promo.name"></span>
+                            <span>Applied</span>
+                        </div>
+                    </template>
                     <div class="flex justify-between text-gray-600">
                         <span>PPN ({{ $taxRate ?? 0 }}%)</span>
                         <span class="font-medium" x-text="formatCurrency(taxAmount)"></span>
@@ -184,6 +205,16 @@
                             <span>TOTAL</span>
                             <span class="text-slate-700" x-text="formatCurrency(finalTotal)"></span>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Coupon Code -->
+                <div class="mt-4 pt-2 border-t border-gray-100">
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Kode Kupon</label>
+                    <div class="flex space-x-2">
+                        <input type="text" x-model.debounce.500ms="couponCode" 
+                            placeholder="Masukkan kode..."
+                            class="flex-1 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                     </div>
                 </div>
 
@@ -274,6 +305,14 @@
                                 class="py-3 rounded-lg font-medium transition-colors">
                                 Transfer
                             </button>
+                        </div>
+
+                        <!-- Error Message -->
+                        <div x-show="paymentError" x-cloak class="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start">
+                            <svg class="w-5 h-5 text-red-600 mt-0.5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span class="text-red-700 text-sm" x-text="paymentError"></span>
                         </div>
                     </div>
 
@@ -392,6 +431,7 @@
                     customerSearch: '',
                     customerResults: [],
                     customerSearchFocused: false,
+                    customerSelectedIndex: -1,
 
                     // Points Management
                     pointsToRedeem: 0,
@@ -423,9 +463,29 @@
                             const response = await fetch(`/pos/customers/search?q=${encodeURIComponent(this.customerSearch)}`);
                             const data = await response.json();
                             this.customerResults = data;
+                            this.customerSelectedIndex = -1;
                         } catch (error) {
                             console.error('Customer search error:', error);
                             this.customerResults = [];
+                        }
+                    },
+
+                    navigateCustomer(direction) {
+                        if (this.customerResults.length === 0) return;
+
+                        this.customerSelectedIndex += direction;
+
+                        // Wrap around
+                        if (this.customerSelectedIndex < 0) {
+                            this.customerSelectedIndex = this.customerResults.length - 1;
+                        } else if (this.customerSelectedIndex >= this.customerResults.length) {
+                            this.customerSelectedIndex = 0;
+                        }
+                    },
+
+                    selectCurrentCustomer() {
+                        if (this.customerSelectedIndex >= 0 && this.customerResults[this.customerSelectedIndex]) {
+                            this.selectCustomer(this.customerResults[this.customerSelectedIndex]);
                         }
                     },
 
@@ -433,6 +493,9 @@
                         this.selectedCustomer = customer;
                         this.customerSearch = '';
                         this.customerResults = [];
+                        this.customerSearch = '';
+                        this.customerResults = [];
+                        this.customerSelectedIndex = -1;
                         this.customerSearchFocused = false;
                         
                         // Reset points on customer change
@@ -574,17 +637,25 @@
                     autocompleteResults: [],
                     autocompleteIndex: -1,
                     cart: [],
+
                     selectedCartIndex: -1,
+                    isUpdatingFromServer: false,
                     taxRate: {{ $taxRate ?? 0 }},
                     taxType: '{{ $taxType ?? 'exclusive' }}',
                     amountPaid: 0,
                     paymentMethod: 'cash',
                     showPaymentModal: false,
+                    paymentError: '',
                     showSuccessModal: false,
                     isProcessing: false,
                     lastInvoice: '',
                     lastTransactionId: null,
                     quickCashAmounts: [10000, 20000, 50000, 100000, 200000, 500000],
+
+                    // Promotions
+                    promotionDiscount: 0,
+                    appliedPromotions: [],
+                    couponCode: '',
 
                     // Custom Confirm Modal
                     showConfirmModal: false,
@@ -596,6 +667,7 @@
                     pointsDiscount: 0,
                     pointsToRedeem: 0,
                     customerId: null,
+                    currentCustomer: null,
 
                     // localStorage key for cart persistence
                     storageKey: 'pos_cart_data',
@@ -607,8 +679,20 @@
 
                         // Watch cart changes and save to localStorage
                         this.$watch('cart', (value) => {
+                            if (this.isUpdatingFromServer) return;
                             this.saveCartToStorage();
+                            this.calculateTotals();
                         }, { deep: true });
+
+                        this.$watch('couponCode', (value) => {
+                            this.calculateTotals();
+                            this.saveCartToStorage();
+                        });
+
+                        // Calculate totals immediately to restore discounts
+                        if (this.cart.length > 0) {
+                            this.calculateTotals();
+                        }
 
                         this.$refs.searchInput.focus();
                     },
@@ -618,8 +702,8 @@
                         try {
                             const data = {
                                 cart: this.cart,
-                                amountPaid: this.amountPaid,
-                                paymentMethod: this.paymentMethod,
+                                couponCode: this.couponCode,
+                                customer: this.currentCustomer, // Saved from updateCustomer event
                                 savedAt: new Date().toISOString()
                             };
                             localStorage.setItem(this.storageKey, JSON.stringify(data));
@@ -637,11 +721,24 @@
                                 const savedAt = new Date(data.savedAt);
                                 const hoursSinceSave = (Date.now() - savedAt.getTime()) / (1000 * 60 * 60);
 
-                                if (hoursSinceSave < 24 && data.cart && data.cart.length > 0) {
-                                    this.cart = data.cart;
-                                    this.amountPaid = data.amountPaid || 0;
-                                    this.paymentMethod = data.paymentMethod || 'cash';
-                                    console.log('Cart restored from localStorage:', this.cart.length, 'items');
+                                if (hoursSinceSave < 24) {
+                                    if (data.cart && data.cart.length > 0) {
+                                        this.cart = data.cart;
+                                        console.log('Cart restored from localStorage:', this.cart.length, 'items');
+                                    }
+                                    
+                                    if (data.couponCode) {
+                                        this.couponCode = data.couponCode;
+                                    }
+
+                                    if (data.customer) {
+                                        this.currentCustomer = data.customer;
+                                        // Dispatch event to restore customer component UI
+                                        // Use setTimeout to ensure component is initialized
+                                        setTimeout(() => {
+                                            this.$dispatch('restore-customer-state', data.customer);
+                                        }, 100);
+                                    }
                                 }
                             }
                         } catch (e) {
@@ -652,6 +749,19 @@
                     clearCartStorage() {
                         try {
                             localStorage.removeItem(this.storageKey);
+                            
+                            // Reset Customer State
+                            this.currentCustomer = null;
+                            this.customerId = null;
+                            this.pointsToRedeem = 0;
+                            this.pointsDiscount = 0;
+                            
+                            // Reset Coupon
+                            this.couponCode = '';
+                            
+                            // Dispatch event to clear customer component
+                            this.$dispatch('restore-customer-state', null);
+                            
                         } catch (e) {
                             console.warn('Failed to clear cart from localStorage:', e);
                         }
@@ -691,16 +801,88 @@
                         return Math.round(parseInt(this.amountPaid || 0) - this.finalTotal);
                     },
                     get finalTotal() {
-                        return Math.max(0, Math.round(this.grandTotal - this.pointsDiscount));
+                        return Math.max(0, Math.round(this.grandTotal - this.pointsDiscount - this.promotionDiscount));
                     },
 
                     // Methods
+                    async calculateTotals() {
+                        if (this.cart.length === 0) {
+                            this.promotionDiscount = 0;
+                            this.appliedPromotions = [];
+                            return;
+                        }
+
+                        // Use local logic for instant feedback until server responds
+                        // (Optional, for now just wait for server)
+
+                        try {
+                            // Prepare items for server
+                            const items = this.cart.map(item => ({
+                                id: item.id,
+                                qty: item.qty,
+                                price: item.selling_price || item.price || 0, // Ensure price field match
+                                unit: item.unit
+                            }));
+
+                            const response = await fetch('/pos/calculate', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                                },
+                                body: JSON.stringify({
+                                    items: items,
+                                    coupon_code: this.couponCode
+                                })
+                            });
+
+                            if (!response.ok) return;
+
+                            const data = await response.json();
+                            
+                            this.promotionDiscount = parseFloat(data.discount_amount);
+                            this.appliedPromotions = data.promotions;
+                            
+                            // Map discounts back to cart items
+                            if (data.items) {
+                                this.isUpdatingFromServer = true;
+                                this.cart = this.cart.map(localItem => {
+                                    const serverItem = data.items.find(i => i.product_id == localItem.id);
+                                    if (serverItem) {
+                                        // Update discount info
+                                        return { 
+                                            ...localItem, 
+                                            discount_amount: parseFloat(serverItem.discount_amount),
+                                            // Keep other local props
+                                        };
+                                    }
+                                    return { ...localItem, discount_amount: 0 };
+                                });
+                                
+                                // Reset flag after Alpine processes the update
+                                this.$nextTick(() => {
+                                    this.isUpdatingFromServer = false;
+                                });
+                            }
+
+                            // Check if coupon was applied
+                            if (this.couponCode && data.coupon_code !== this.couponCode && !data.promotions.some(p => p.code === this.couponCode)) {
+                                // Coupon invalid or not applied logic if needed
+                            }
+
+                        } catch (error) {
+                            console.error('Calculation error:', error);
+                        }
+                    },
+
                     updatePoints(detail) {
                         this.pointsDiscount = detail.discount || 0;
                         this.pointsToRedeem = detail.redeem || 0;
                     },
                     updateCustomer(detail) {
                         this.customerId = detail.customer ? detail.customer.id : null;
+                        this.currentCustomer = detail.customer; // Store for persistence
+                        this.saveCartToStorage();
                     },
                     handleSearchEnter() {
                         // Jika ada autocomplete dan ada item terpilih, pilih item tersebut
@@ -1016,13 +1198,23 @@
                     },
 
                     async processCheckout() {
-                        if (this.paymentMethod === 'cash' && this.change < 0) {
-                            alert('Uang tidak cukup!');
+                        if (this.cart.length === 0) return;
+
+                        // Validation
+                        this.paymentError = '';
+                        if (this.amountPaid < this.finalTotal && this.paymentMethod === 'cash') {
+                            this.paymentError = 'Jumlah pembayaran kurang dari total tagihan';
                             return;
                         }
 
-                        if (this.isProcessing) return;
                         this.isProcessing = true;
+
+                        // Auto-focus and select the amount input
+                        this.$nextTick(() => {
+                            if (this.$refs.amountPaidInput) {
+                                this.$refs.amountPaidInput.focus();
+                            }
+                        });
 
                         try {
                             const payload = {
@@ -1039,7 +1231,8 @@
                                         : this.finalTotal
                                 },
                                 customer_id: this.customerId,
-                                points_to_redeem: this.pointsToRedeem
+                                points_to_redeem: this.pointsToRedeem,
+                                coupon_code: this.couponCode
                             };
 
                             console.log('Sending checkout:', payload);
@@ -1058,14 +1251,19 @@
                             console.log('Checkout response:', data);
 
                             if (!response.ok || data.success === false) {
-                                alert(data.error || data.message || 'Gagal memproses pembayaran');
+                                this.paymentError = data.error || data.message || 'Gagal memproses pembayaran';
                                 this.isProcessing = false;
                                 return;
                             }
 
-                            this.lastInvoice = data.invoice_number || 'INV-TEMP';
+                            this.lastInvoice = data.invoice_number;
                             this.lastTransactionId = data.transaction_id;
-                            this.showPaymentModal = false;
+                            
+                            // Reset State
+                            this.cart = [];
+                            this.clearCartStorage();
+                            
+                            this.closePaymentModal();
                             this.showSuccessModal = true;
 
                             // Auto-focus print receipt button
@@ -1077,7 +1275,12 @@
 
                         } catch (error) {
                             console.error('Checkout error:', error);
-                            alert('Terjadi kesalahan: ' + error.message);
+                            // Show error in modal if open, otherwise alert
+                            if (this.showPaymentModal) {
+                                this.paymentError = error.message || 'Terjadi kesalahan saat memproses transaksi';
+                            } else {
+                                alert(error.message || 'Terjadi kesalahan saat memproses transaksi');
+                            }
                         } finally {
                             this.isProcessing = false;
                         }

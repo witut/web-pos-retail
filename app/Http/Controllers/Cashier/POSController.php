@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Services\TransactionService;
 use App\Services\CustomerService;
 use App\Services\SettingService;
+use App\Services\PromotionService;
 use Illuminate\Http\Request;
 
 /**
@@ -28,15 +29,18 @@ class POSController extends Controller
     protected TransactionService $transactionService;
     protected CustomerService $customerService;
     protected SettingService $settingService;
+    protected PromotionService $promotionService;
 
     public function __construct(
         TransactionService $transactionService,
         CustomerService $customerService,
-        SettingService $settingService
+        SettingService $settingService,
+        PromotionService $promotionService
     ) {
         $this->transactionService = $transactionService;
         $this->customerService = $customerService;
         $this->settingService = $settingService;
+        $this->promotionService = $promotionService;
     }
 
     /**
@@ -177,6 +181,57 @@ class POSController extends Controller
     }
 
     /**
+     * Calculate cart totals with promotions (AJAX)
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function calculate(Request $request)
+    {
+        $items = $request->input('items', []);
+        $couponCode = $request->input('coupon_code');
+
+        // Transform items for service
+        $cartItems = collect($items)->map(function ($item) {
+            return [
+                'product_id' => $item['id'], // POS JS uses 'id', Service uses 'product_id'
+                'qty' => $item['qty'],
+                'price' => $item['price'] ?? 0, // POS JS uses 'price'
+                'unit_name' => $item['unit'] ?? null,
+            ];
+        })->toArray();
+
+        // Calculate discount
+        $result = $this->promotionService->calculateCartDiscount($cartItems, $couponCode);
+
+        // Calculate Tax
+        $subtotalNet = $result['final_total']; // After discount
+        $taxRate = Setting::getTaxRate();
+        $taxType = Setting::get('tax_type', 'exclusive');
+
+        $taxAmount = 0;
+        $grandTotal = $subtotalNet;
+
+        if ($taxType === 'inclusive') {
+            // Tax included
+            $taxAmount = $subtotalNet - ($subtotalNet / (1 + ($taxRate / 100)));
+        } else {
+            // Tax excluded
+            $taxAmount = $subtotalNet * ($taxRate / 100);
+            $grandTotal = $subtotalNet + $taxAmount;
+        }
+
+        return response()->json([
+            'subtotal' => $result['subtotal'],
+            'discount_amount' => $result['discount_amount'],
+            'tax_amount' => round($taxAmount),
+            'grand_total' => round($grandTotal),
+            'promotions' => $result['applied_promotions'],
+            'items' => $result['items'],
+        ]);
+    }
+
+    /**
      * Process checkout (Create transaction)
      * Uses TransactionService for atomic checkout
      * 
@@ -195,18 +250,39 @@ class POSController extends Controller
             'payment.amount_paid' => 'required|numeric|min:0',
             'customer_id' => 'nullable|exists:customers,id',
             'points_to_redeem' => 'nullable|integer|min:0',
+            'coupon_code' => 'nullable|string',
         ]);
 
         try {
-            // Prepare cart items for TransactionService
-            $cartItems = collect($validated['items'])->map(function ($item) {
+            // Prepare cart items for PromotionService
+            $cartItemsForPromo = collect($validated['items'])->map(function ($item) {
                 return [
                     'product_id' => $item['product_id'],
                     'qty' => $item['qty'],
-                    'unit_price' => $item['price'], // Pass as unit_price for Service
+                    'price' => $item['price'],
                     'unit_name' => $item['unit_name'],
                 ];
             })->toArray();
+
+            // Calculate discount
+            $couponCode = $validated['coupon_code'] ?? null;
+            $promoResult = $this->promotionService->calculateCartDiscount($cartItemsForPromo, $couponCode);
+
+            $discountAmount = $promoResult['discount_amount'];
+            $promotionId = null;
+            $couponId = null;
+
+            if (!empty($promoResult['applied_promotions'])) {
+                $promotionId = $promoResult['applied_promotions'][0]['id'] ?? null;
+            }
+
+            if ($couponCode) {
+                $coupon = \App\Models\Coupon::active()->where('code', $couponCode)->first();
+                $couponId = $coupon ? $coupon->id : null;
+            }
+
+            // Prepare items for TransactionService
+            $cartItems = $cartItemsForPromo; // Structure is same/compatible
 
             // Prepare payment data
             $paymentData = [
@@ -240,7 +316,10 @@ class POSController extends Controller
                 auth()->id(),
                 $customerId,
                 $pointsDiscount,
-                $pointsToRedeem
+                $pointsToRedeem,
+                $discountAmount,
+                $promotionId,
+                $couponId
             );
 
             // Calculate and award points if customer selected

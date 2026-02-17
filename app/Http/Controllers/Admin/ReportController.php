@@ -5,16 +5,21 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\ReportService;
+use App\Services\InventoryAnalysisService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class ReportController extends Controller
 {
     protected $reportService;
+    protected $inventoryAnalysisService;
 
-    public function __construct(ReportService $reportService)
-    {
+    public function __construct(
+        ReportService $reportService,
+        InventoryAnalysisService $inventoryAnalysisService
+    ) {
         $this->reportService = $reportService;
+        $this->inventoryAnalysisService = $inventoryAnalysisService;
     }
 
     /**
@@ -67,7 +72,7 @@ class ReportController extends Controller
     {
         $days = (int) $request->input('days', 60); // Default 60 hari
 
-        $products = $this->reportService->getDeadStockReport($days);
+        $products = $this->inventoryAnalysisService->getDeadStock($days);
 
         return view('admin.reports.dead_stock', [
             'products' => $products,

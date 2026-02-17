@@ -99,9 +99,9 @@
                                 Rp {{ number_format($product->stock_on_hand * $product->cost_price, 0, ',', '.') }}
                             </td>
                             <td class="px-6 py-4 text-center">
-                                <a href="{{ route('admin.products.edit', $product->id) }}"
+                                <a href="{{ route('admin.promotions.create', ['dead_stock_product_id' => $product->id]) }}"
                                     class="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                                    Edit / Diskon
+                                    Buat Diskon
                                 </a>
                             </td>
                         </tr>

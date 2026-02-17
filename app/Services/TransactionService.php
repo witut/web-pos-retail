@@ -56,28 +56,35 @@ class TransactionService
         int $cashierId,
         ?int $customerId = null,
         float $pointsDiscount = 0,
-        int $pointsToRedeem = 0
+        int $pointsToRedeem = 0,
+        float $discountAmount = 0,
+        ?int $promotionId = null,
+        ?int $couponId = null
     ): Transaction {
         // Validate cart tidak kosong
         if (empty($cartItems)) {
             throw new Exception('Keranjang belanja kosong');
         }
 
-        return DB::transaction(function () use ($cartItems, $paymentData, $cashierId, $customerId, $pointsDiscount, $pointsToRedeem) {
+        return DB::transaction(function () use ($cartItems, $paymentData, $cashierId, $customerId, $pointsDiscount, $pointsToRedeem, $discountAmount, $promotionId, $couponId) {
 
             // 1. Validate & prepare items dengan HPP
             $preparedItems = $this->validateAndPrepareItems($cartItems);
 
             // 2. Calculate totals
-            $totals = $this->calculateTotal($preparedItems);
-            // 2. Calculate totals
-            $totals = $this->calculateTotal($preparedItems);
+            $totals = $this->calculateTotal($preparedItems, $discountAmount);
             $grandTotal = $totals['total'] - $pointsDiscount;
 
             // 3. Validate payment amount
             // Allow small float difference
             if ($paymentData['amount_paid'] < round($grandTotal) - 1) {
-                throw new Exception('Jumlah pembayaran kurang dari total');
+                Log::error('Validation Failed', [
+                    'amount_paid' => $paymentData['amount_paid'],
+                    'grandTotal' => $grandTotal,
+                    'round_grandTotal' => round($grandTotal),
+                    'diff' => round($grandTotal) - 1
+                ]);
+                throw new Exception("Jumlah pembayaran kurang dari total (Paid: {$paymentData['amount_paid']}, Total: " . round($grandTotal) . ")");
             }
 
             // 4. Generate invoice number (dengan locking untuk prevent collision)
@@ -90,7 +97,7 @@ class TransactionService
             $pointsEarned = 0;
             if ($customerId) {
                 // Points calculated based on total after discount
-                $finalTotal = $totals['total'] - $pointsDiscount;
+                $finalTotal = $grandTotal; // Use grandTotal which already deduces discounts
                 $pointsEarned = $this->customerService->calculatePointsEarned($finalTotal);
             }
 
@@ -102,15 +109,17 @@ class TransactionService
                 'customer_id' => $customerId,
                 'subtotal' => $totals['subtotal'],
                 'tax_amount' => $totals['tax_amount'],
-                'discount_amount' => 0, // Future feature
+                'discount_amount' => $discountAmount,
                 'points_discount_amount' => $pointsDiscount,
-                'total' => $totals['total'] - $pointsDiscount,
+                'total' => $grandTotal,
                 'points_earned' => $pointsEarned,
                 'points_redeemed' => $pointsToRedeem,
                 'payment_method' => $paymentData['method'],
                 'amount_paid' => $paymentData['amount_paid'],
                 'change_amount' => $changeAmount,
                 'status' => 'completed',
+                'promotion_id' => $promotionId,
+                'coupon_id' => $couponId,
             ]);
 
             // 8. Create transaction items & deduct stock
@@ -271,13 +280,17 @@ class TransactionService
      * @param array $items Prepared items dengan price & qty
      * @return array ['subtotal' => float, 'tax_amount' => float, 'total' => float]
      */
-    public function calculateTotal(array $items): array
+    public function calculateTotal(array $items, float $discountAmount = 0): array
     {
         $subtotal = 0;
 
         foreach ($items as $item) {
             $subtotal += $item['subtotal'];
         }
+
+        // Apply global discount to base
+        // Note: This assumes simplified pro-ration or global deduction
+        $taxableBase = max(0, $subtotal - $discountAmount);
 
         // Get tax settings
         $taxRate = Setting::getTaxRate();
@@ -286,7 +299,7 @@ class TransactionService
         if ($taxType === 'inclusive') {
             // Formula: Tax = Total - (Total / (1 + Rate))
             // Subtotal (DPP) = Total - Tax
-            $total = round($subtotal, 2); // In inclusive, SUM(prices) is the Total to pay
+            $total = round($taxableBase, 2); // In inclusive, base IS the total to pay
             $taxAmount = $total - ($total / (1 + ($taxRate / 100)));
             $subtotalNet = $total - $taxAmount;
 
@@ -298,8 +311,9 @@ class TransactionService
         }
 
         // Exclusive (Default)
-        $taxAmount = $subtotal * ($taxRate / 100);
-        $total = $subtotal + $taxAmount;
+        // Tax calculated on Net Amount (Subtotal - Discount)
+        $taxAmount = $taxableBase * ($taxRate / 100);
+        $total = $taxableBase + $taxAmount;
 
         return [
             'subtotal' => round($subtotal, 2),
@@ -343,7 +357,7 @@ class TransactionService
             }
 
             // Get unit price (dari product atau product unit)
-            $unitPrice = $item['unit_price'] ?? $product->selling_price;
+            $unitPrice = $item['unit_price'] ?? $item['price'] ?? $product->selling_price;
 
             // Calculate Cost Price per Unit (HPP base * conversion)
             $costPricePerUnit = $product->cost_price * $conversionRate;

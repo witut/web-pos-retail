@@ -147,6 +147,26 @@
                         :class="sidebarOpen ? 'opacity-100' : 'opacity-0 hidden'">Opname / Stok Fisik</span>
                 </a>
 
+                <!-- MARKETING Group -->
+                <div class="mt-6 mb-3 transition-opacity duration-300"
+                    :class="sidebarOpen ? 'px-3 opacity-100' : 'px-0 opacity-0 hidden'">
+                    <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Marketing</h3>
+                </div>
+                <div class="my-3 border-t border-slate-800" :class="!sidebarOpen ? 'block' : 'hidden'"></div>
+
+                <a href="{{ route('admin.promotions.index') }}"
+                    class="flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all group whitespace-nowrap
+                          {{ request()->routeIs('admin.promotions.*') ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white' }}"
+                    title="Promosi">
+                    <svg class="w-5 h-5 flex-shrink-0 transition-colors" :class="sidebarOpen ? 'mr-3' : 'mr-0 mx-auto'"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                    </svg>
+                    <span class="font-medium transition-opacity duration-300"
+                        :class="sidebarOpen ? 'opacity-100' : 'opacity-0 hidden'">Promosi</span>
+                </a>
+
                 <!-- REPORTS Group -->
                 <div class="mt-6 mb-3 transition-opacity duration-300"
                     :class="sidebarOpen ? 'px-3 opacity-100' : 'px-0 opacity-0 hidden'">

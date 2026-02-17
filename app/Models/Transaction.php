@@ -60,6 +60,8 @@ class Transaction extends Model
         'points_earned',
         'points_redeemed',
         'points_discount_amount',
+        'promotion_id',
+        'coupon_id',
     ];
 
     protected $casts = [
@@ -100,6 +102,22 @@ class Transaction extends Model
     public function customer()
     {
         return $this->belongsTo(Customer::class, 'customer_id');
+    }
+
+    /**
+     * Get promotion applied to this transaction
+     */
+    public function promotion()
+    {
+        return $this->belongsTo(Promotion::class);
+    }
+
+    /**
+     * Get coupon applied to this transaction
+     */
+    public function coupon()
+    {
+        return $this->belongsTo(Coupon::class);
     }
 
     /**

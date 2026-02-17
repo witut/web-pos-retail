@@ -1,5 +1,6 @@
 {{-- Customer Selection Component --}}
-<div class="bg-white rounded-xl shadow-sm p-4" x-data="customerComponent()">
+<div class="bg-white rounded-xl shadow-sm p-4" x-data="customerComponent()"
+    @restore-customer-state.window="selectCustomer($event.detail)">
     <div class="flex items-center justify-between mb-3">
         <h3 class="text-sm font-semibold text-gray-700">Pelanggan</h3>
         <span x-show="!selectedCustomer" class="text-xs text-gray-400">(Opsional)</span>
@@ -56,16 +57,19 @@
     {{-- Customer Search --}}
     <div x-show="!selectedCustomer" class="relative">
         <input type="text" x-model="customerSearch" @input.debounce.300ms="searchCustomers()"
-            @focus="customerSearchFocused = true" placeholder="Cari pelanggan (nama/HP)..."
+            @focus="customerSearchFocused = true" @keydown.arrow-down.prevent="navigateCustomer(1)"
+            @keydown.arrow-up.prevent="navigateCustomer(-1)" @keydown.enter.prevent="selectCurrentCustomer()"
+            placeholder="Cari pelanggan (nama/HP)..."
             class="w-full pl-3 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 text-sm">
 
         {{-- Customer Search Results --}}
         <div x-show="customerResults.length > 0 && customerSearchFocused" x-cloak
             @click.outside="customerSearchFocused = false"
             class="absolute left-0 right-0 z-50 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-60 overflow-y-auto">
-            <template x-for="customer in customerResults" :key="customer.id">
+            <template x-for="(customer, index) in customerResults" :key="customer.id">
                 <div @click="selectCustomer(customer)"
-                    class="px-3 py-2 hover:bg-slate-50 cursor-pointer border-b border-gray-100 last:border-0">
+                    :class="{'bg-slate-100': index === customerSelectedIndex, 'hover:bg-slate-50': index !== customerSelectedIndex}"
+                    class="px-3 py-2 cursor-pointer border-b border-gray-100 last:border-0">
                     <div class="flex justify-between items-start">
                         <div>
                             <p class="font-medium text-gray-800 text-sm" x-text="customer.name"></p>
