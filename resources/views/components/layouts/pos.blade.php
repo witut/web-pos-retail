@@ -26,14 +26,18 @@
                     x-text="new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })"></span>
                 @if(auth()->user()->isAdmin())
                     <a href="{{ route('admin.dashboard') }}" class="text-sm text-blue-400 hover:text-blue-300">
-                        ← Kembali ke Admin
+                        ← Administrator
                     </a>
                 @else
                     <a href="{{ route('pos.dashboard') }}" class="text-sm text-emerald-400 hover:text-emerald-300">
-                        Dashboard →
+                        Dashboard
                     </a>
                 @endif
 
+                <a href="{{ route('cashier.shift.close') }}"
+                    class="text-sm text-red-400 hover:text-red-300 border-l border-slate-600 pl-4">
+                    Tutup Register
+                </a>
             </div>
         </header>
 

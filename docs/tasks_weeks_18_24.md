@@ -3,20 +3,20 @@
 ## Weeks 18-19: Discount & Promotion System
 - [x] **Database Migration**: Create `promotions`, `promotion_products`, `coupons` tables
 - [x] **Models**: Create `Promotion`, `Coupon` models with relationships
-- [ ] **Service Layer**: Implement `PromotionService` for calculation logic
-- [ ] **Admin UI**:
-    - [ ] List Promotions page
-    - [ ] Create/Edit Promotion form (with type selection: %, fixed, buy X get Y)
-    - [ ] Coupon management page
-- [ ] **POS Integration**:
-    - [ ] Auto-apply automatic promotions in Cart
-    - [ ] Add "Enter Coupon" button and modal
-    - [ ] Display discount amount in receipt preview
+- [x] **Service Layer**: Implement `PromotionService` for calculation logic
+- [x] **Admin UI**:
+    - [x] List Promotions page
+    - [x] Create/Edit Promotion form (with type selection: %, fixed, buy X get Y)
+    - [x] Coupon management page
+- [x] **POS Integration**:
+    - [x] Auto-apply automatic promotions in Cart
+    - [x] Add "Enter Coupon" button and modal
+    - [x] Display discount amount in receipt preview
 - [x] **Deadstock Intelligence (Report Exists)**:
     - [x] Query: `ReportService::getDeadStockReport` (Existing)
     - [x] Dashboard: `admin.reports.dead_stock` (Existing)
-    - [ ] **Integration**: Update "Edit / Diskon" link to -> "Create Promotion" with pre-filled data.
-- [ ] **Backend**: Update `Transaction` logic to save discount details
+    - [x] **Integration**: Update "Edit / Diskon" link to -> "Create Promotion" with pre-filled data.
+- [x] **Backend**: Update `Transaction` logic to save discount details
 
 ## Week 20: Shift Management
 - [ ] **Database Migration**: Create `shifts`, `cash_register_sessions`, `cash_movements` tables

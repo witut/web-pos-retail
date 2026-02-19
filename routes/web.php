@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\SupplierController;
 use App\Http\Controllers\Admin\StockController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Cashier\POSController;
+use App\Http\Controllers\Cashier\ShiftController;
 
 /*
 |--------------------------------------------------------------------------
@@ -111,6 +112,9 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     // Promotions
     Route::resource('promotions', \App\Http\Controllers\Admin\PromotionController::class);
     Route::resource('coupons', \App\Http\Controllers\Admin\CouponController::class);
+
+    // Shift History
+    Route::resource('shifts', \App\Http\Controllers\Admin\ShiftController::class)->only(['index', 'show']);
 });
 
 /*
@@ -119,41 +123,65 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 |--------------------------------------------------------------------------
 | Require authentication + cashier or admin role
 */
-Route::middleware(['auth', 'role:cashier,admin'])->prefix('pos')->name('pos.')->group(function () {
+Route::middleware(['auth', 'role:cashier,admin'])->group(function () {
 
-    // Dashboard & Profile
-    Route::get('/dashboard', [\App\Http\Controllers\Cashier\DashboardController::class, 'index'])->name('dashboard');
-    Route::get('/profile', [\App\Http\Controllers\Cashier\DashboardController::class, 'profile'])->name('profile');
-    Route::put('/profile', [\App\Http\Controllers\Cashier\DashboardController::class, 'updateProfile'])->name('profile.update');
+    // --- Shift Management (Open) ---
+    Route::get('/shift/open', [ShiftController::class, 'create'])->name('cashier.shift.create');
+    Route::post('/shift/open', [ShiftController::class, 'store'])->name('cashier.shift.store');
 
-    // POS Terminal
-    Route::get('/', [POSController::class, 'index'])->name('index');
+    // --- POS Page (Allowed to load, checks session internally) ---
+    Route::get('/pos', [POSController::class, 'index'])->name('pos.index');
 
-    // Product search (AJAX)
-    Route::get('/search-product', [POSController::class, 'searchProduct'])->name('search-product');
-    Route::get('/autocomplete', [POSController::class, 'autocomplete'])->name('autocomplete');
+    // --- POS Dashboard & History (Allowed without session) ---
+    Route::prefix('pos')->name('pos.')->group(function () {
+        Route::get('/dashboard', [\App\Http\Controllers\Cashier\DashboardController::class, 'index'])->name('dashboard');
+        Route::get('/profile', [\App\Http\Controllers\Cashier\DashboardController::class, 'profile'])->name('profile');
+        Route::put('/profile', [\App\Http\Controllers\Cashier\DashboardController::class, 'updateProfile'])->name('profile.update');
 
-    // Customer search (AJAX)
-    Route::get('/customers/search', [\App\Http\Controllers\Admin\CustomerController::class, 'search'])->name('customers.search');
-    Route::post('/customers/quick-add', [\App\Http\Controllers\Admin\CustomerController::class, 'quickStore'])->name('customers.quick-add');
+        // History & Print (Read only)
+        Route::get('/history', [POSController::class, 'history'])->name('history');
+        Route::get('/transaction/{transaction}', [POSController::class, 'show'])->name('transaction.show');
+        Route::get('/transaction/{transaction}/print', [POSController::class, 'print'])->name('transaction.print');
+
+        // Product/Customer Search (Safe to allow, needed for POS overlay background if we want it to look alive, though interaction is blocked)
+        Route::get('/search-product', [POSController::class, 'searchProduct'])->name('search-product');
+        Route::get('/search-product', [POSController::class, 'searchProduct'])->name('search-product');
+        Route::get('/autocomplete', [POSController::class, 'autocomplete'])->name('autocomplete');
+    });
+
+    // --- Session History (Allowed without active session) ---
+    Route::get('/shift/history', [ShiftController::class, 'history'])->name('cashier.shift.history');
+
+    // --- Protected Logic (Requires Active Session) ---
+    Route::middleware(['active_session'])->group(function () {
+
+        // POS Transaction Routes
+        Route::prefix('pos')->name('pos.')->group(function () {
+
+            // Customer search (AJAX) - Keep inside or outside? Outside is fine for read-only.
+            Route::get('/customers/search', [\App\Http\Controllers\Admin\CustomerController::class, 'search'])->name('customers.search');
+            Route::post('/customers/quick-add', [\App\Http\Controllers\Admin\CustomerController::class, 'quickStore'])->name('customers.quick-add'); // Write action
+
+            // Checkout
+            Route::post('/calculate', [POSController::class, 'calculate'])->name('calculate');
+            Route::post('/checkout', [POSController::class, 'checkout'])->name('checkout');
+
+            // Void transaction
+            Route::post('/transaction/{transaction}/void', [POSController::class, 'void'])->name('transaction.void');
+
+            // Verify Admin PIN
+            Route::post('/verify-pin', [POSController::class, 'verifyPin'])->name('verify-pin');
+        });
 
 
-    // Checkout
-    Route::post('/calculate', [POSController::class, 'calculate'])->name('calculate');
-    Route::post('/checkout', [POSController::class, 'checkout'])->name('checkout');
 
-    // Transaction history
-    Route::get('/history', [POSController::class, 'history'])->name('history');
-    Route::get('/transaction/{transaction}', [POSController::class, 'show'])->name('transaction.show');
+        // Close Shift
+        Route::get('/shift/close', [ShiftController::class, 'edit'])->name('cashier.shift.close');
+        Route::post('/shift/close', [ShiftController::class, 'update'])->name('cashier.shift.update');
+    });
 
-    // Print receipt
-    Route::get('/transaction/{transaction}/print', [POSController::class, 'print'])->name('transaction.print');
-
-    // Void transaction (requires Admin PIN in controller)
-    Route::post('/transaction/{transaction}/void', [POSController::class, 'void'])->name('transaction.void');
-
-    // Verify Admin PIN (AJAX)
-    Route::post('/verify-pin', [POSController::class, 'verifyPin'])->name('verify-pin');
+    // Specific session detail route (Wildcard must be last)
+    Route::get('/shift/{session}', [ShiftController::class, 'show'])->name('cashier.shift.show');
 });
 
 /*

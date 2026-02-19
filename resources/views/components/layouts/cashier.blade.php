@@ -84,6 +84,20 @@
                         :class="sidebarOpen ? 'opacity-100' : 'opacity-0 hidden'">Riwayat Transaksi</span>
                 </a>
 
+                <!-- Riwayat Sesi -->
+                <a href="{{ route('cashier.shift.history') }}"
+                    class="flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all group whitespace-nowrap
+                          {{ request()->routeIs('cashier.shift.*') ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white' }}"
+                    title="Riwayat Sesi">
+                    <svg class="w-5 h-5 flex-shrink-0 transition-colors" :class="sidebarOpen ? 'mr-3' : 'mr-0 mx-auto'"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span class="font-medium transition-opacity duration-300"
+                        :class="sidebarOpen ? 'opacity-100' : 'opacity-0 hidden'">Riwayat Sesi</span>
+                </a>
+
                 <div class="my-3 border-t border-slate-800"></div>
 
                 <!-- Profil -->

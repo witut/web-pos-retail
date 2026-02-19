@@ -59,14 +59,15 @@ class TransactionService
         int $pointsToRedeem = 0,
         float $discountAmount = 0,
         ?int $promotionId = null,
-        ?int $couponId = null
+        ?int $couponId = null,
+        float $couponDiscountAmount = 0
     ): Transaction {
         // Validate cart tidak kosong
         if (empty($cartItems)) {
             throw new Exception('Keranjang belanja kosong');
         }
 
-        return DB::transaction(function () use ($cartItems, $paymentData, $cashierId, $customerId, $pointsDiscount, $pointsToRedeem, $discountAmount, $promotionId, $couponId) {
+        return DB::transaction(function () use ($cartItems, $paymentData, $cashierId, $customerId, $pointsDiscount, $pointsToRedeem, $discountAmount, $promotionId, $couponId, $couponDiscountAmount) {
 
             // 1. Validate & prepare items dengan HPP
             $preparedItems = $this->validateAndPrepareItems($cartItems);
@@ -117,6 +118,7 @@ class TransactionService
                 'payment_method' => $paymentData['method'],
                 'amount_paid' => $paymentData['amount_paid'],
                 'change_amount' => $changeAmount,
+                'coupon_discount_amount' => $couponDiscountAmount,
                 'status' => 'completed',
                 'promotion_id' => $promotionId,
                 'coupon_id' => $couponId,

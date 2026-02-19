@@ -215,10 +215,20 @@
                     <td class="value">Rp {{ number_format($transaction->tax_amount) }}</td>
                 </tr>
             @endif
-            @if ($transaction->discount_amount > 0)
+            @php
+                $promoDiscount = $transaction->discount_amount - $transaction->coupon_discount_amount;
+            @endphp
+
+            @if ($promoDiscount > 0)
                 <tr>
                     <td class="label">Diskon</td>
-                    <td class="value">-Rp {{ number_format($transaction->discount_amount) }}</td>
+                    <td class="value">-Rp {{ number_format($promoDiscount) }}</td>
+                </tr>
+            @endif
+            @if ($transaction->coupon_discount_amount > 0)
+                <tr>
+                    <td class="label">Kupon</td>
+                    <td class="value">-Rp {{ number_format($transaction->coupon_discount_amount) }}</td>
                 </tr>
             @endif
             @if ($transaction->points_discount_amount > 0)

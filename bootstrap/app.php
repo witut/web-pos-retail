@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Register middleware aliases
         $middleware->alias([
             'role' => \App\Http\Middleware\CheckRole::class,
+            'active_session' => \App\Http\Middleware\EnsureActiveSession::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

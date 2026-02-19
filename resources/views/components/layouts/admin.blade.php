@@ -167,6 +167,39 @@
                         :class="sidebarOpen ? 'opacity-100' : 'opacity-0 hidden'">Promosi</span>
                 </a>
 
+                <a href="{{ route('admin.coupons.index') }}"
+                    class="flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all group whitespace-nowrap
+                          {{ request()->routeIs('admin.coupons.*') ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white' }}"
+                    title="Kupon">
+                    <svg class="w-5 h-5 flex-shrink-0 transition-colors" :class="sidebarOpen ? 'mr-3' : 'mr-0 mx-auto'"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                    </svg>
+                    <span class="font-medium transition-opacity duration-300"
+                        :class="sidebarOpen ? 'opacity-100' : 'opacity-0 hidden'">Kupon</span>
+                </a>
+
+                <!-- TRANSACTION Group -->
+                <div class="mt-6 mb-3 transition-opacity duration-300"
+                    :class="sidebarOpen ? 'px-3 opacity-100' : 'px-0 opacity-0 hidden'">
+                    <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Transaksi</h3>
+                </div>
+                <div class="my-3 border-t border-slate-800" :class="!sidebarOpen ? 'block' : 'hidden'"></div>
+
+                <a href="{{ route('admin.shifts.index') }}"
+                    class="flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all group whitespace-nowrap
+                          {{ request()->routeIs('admin.shifts.*') ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white' }}"
+                    title="Riwayat Shift">
+                    <svg class="w-5 h-5 flex-shrink-0 transition-colors" :class="sidebarOpen ? 'mr-3' : 'mr-0 mx-auto'"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span class="font-medium transition-opacity duration-300"
+                        :class="sidebarOpen ? 'opacity-100' : 'opacity-0 hidden'">Riwayat Shift</span>
+                </a>
+
                 <!-- REPORTS Group -->
                 <div class="mt-6 mb-3 transition-opacity duration-300"
                     :class="sidebarOpen ? 'px-3 opacity-100' : 'px-0 opacity-0 hidden'">

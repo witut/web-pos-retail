@@ -64,7 +64,11 @@ class POSController extends Controller
         // Get customer settings
         $cashierCanCreate = $this->settingService->getBool('customer.cashier_can_create', true);
 
-        return view('cashier.pos.index', compact('taxRate', 'taxType', 'todayTransactions', 'cashierCanCreate'));
+        // Check for active session
+        $shiftService = app(\App\Services\ShiftService::class);
+        $session = $shiftService->getCurrentSession(auth()->user());
+
+        return view('cashier.pos.index', compact('taxRate', 'taxType', 'todayTransactions', 'cashierCanCreate', 'session'));
     }
 
     /**
@@ -271,9 +275,18 @@ class POSController extends Controller
             $discountAmount = $promoResult['discount_amount'];
             $promotionId = null;
             $couponId = null;
+            $couponDiscountAmount = 0;
 
             if (!empty($promoResult['applied_promotions'])) {
-                $promotionId = $promoResult['applied_promotions'][0]['id'] ?? null;
+                foreach ($promoResult['applied_promotions'] as $promo) {
+                    if (isset($promo['code'])) {
+                        // This is a coupon
+                        $couponDiscountAmount += $promo['amount'];
+                    } else {
+                        // This is a promotion
+                        $promotionId = $promo['id'] ?? null;
+                    }
+                }
             }
 
             if ($couponCode) {
@@ -319,7 +332,8 @@ class POSController extends Controller
                 $pointsToRedeem,
                 $discountAmount,
                 $promotionId,
-                $couponId
+                $couponId,
+                $couponDiscountAmount
             );
 
             // Calculate and award points if customer selected

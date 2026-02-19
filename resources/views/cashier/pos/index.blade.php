@@ -1,4 +1,5 @@
 <x-layouts.pos :title="'POS Terminal'">
+    @include('cashier.pos._session_overlay')
     <div class="h-full flex" x-data="posTerminal()" x-init="initPOS()" @keydown.window="handleKeyboard($event)" @points-updated.window="updatePoints($event.detail)" @customer-updated.window="updateCustomer($event.detail)">
         <!-- Left Panel: Product Search & Cart -->
         <div class="flex-1 flex flex-col p-4 space-y-4">

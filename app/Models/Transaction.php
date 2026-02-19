@@ -62,6 +62,7 @@ class Transaction extends Model
         'points_discount_amount',
         'promotion_id',
         'coupon_id',
+        'coupon_discount_amount',
     ];
 
     protected $casts = [
@@ -76,6 +77,7 @@ class Transaction extends Model
         'points_earned' => 'integer',
         'points_redeemed' => 'integer',
         'points_discount_amount' => 'decimal:2',
+        'coupon_discount_amount' => 'decimal:2',
     ];
 
     /*

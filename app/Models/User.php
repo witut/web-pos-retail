@@ -125,6 +125,16 @@ class User extends Authenticatable
         return $this->hasMany(StockMovement::class);
     }
 
+    /**
+     * Get semua sesi kasir yang dilakukan user ini
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function cashRegisterSessions()
+    {
+        return $this->hasMany(CashRegisterSession::class);
+    }
+
     /*
     |--------------------------------------------------------------------------
     | SCOPES
