@@ -1,6 +1,10 @@
 <x-layouts.pos :title="'POS Terminal'">
     @include('cashier.pos._session_overlay')
-    <div class="h-full flex" x-data="posTerminal()" x-init="initPOS()" @keydown.window="handleKeyboard($event)" @points-updated.window="updatePoints($event.detail)" @customer-updated.window="updateCustomer($event.detail)">
+    <div class="h-full flex" x-data="posTerminal()" x-init="initPOS()" 
+        @keydown.window="handleKeyboard($event)" 
+        @points-updated.window="updatePoints($event.detail)" 
+        @customer-updated.window="updateCustomer($event.detail)"
+        @open-close-register.window="openCloseRegisterModal()">
         <!-- Left Panel: Product Search & Cart -->
         <div class="flex-1 flex flex-col p-4 space-y-4">
             <!-- Search Bar -->
@@ -393,7 +397,7 @@
         </div>
 
         <!-- Confirmation Modal (Custom) -->
-        <div x-show="showConfirmModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+        <div x-show="showConfirmModal" x-cloak class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50"
             @keydown.escape.prevent="showConfirmModal = false">
             <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
                 <div class="p-6 text-center">
@@ -418,6 +422,132 @@
                 </div>
             </div>
         </div>
+        <!-- Close Register Modal -->
+        <div x-show="showCloseRegisterModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+            @keydown.escape.prevent="closeCloseRegisterModal()">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl mx-4 overflow-hidden flex flex-col max-h-[90vh]"
+                @click.outside="closeCloseRegisterModal()">
+                
+                <!-- Header -->
+                <div class="px-6 py-4 bg-slate-800 text-white flex justify-between items-center">
+                    <h3 class="text-xl font-bold">Tutup Register Kasir (Z-Report)</h3>
+                    <button @click="closeCloseRegisterModal()" class="text-slate-400 hover:text-white">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Content -->
+                <div class="p-6 overflow-y-auto bg-gray-50 flex-1">
+                    
+                    <!-- Loading State -->
+                    <div x-show="isLoadingCloseRegister" class="flex flex-col items-center justify-center py-12">
+                        <svg class="animate-spin h-10 w-10 text-slate-600 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <p class="text-gray-500">Memuat ringkasan sesi...</p>
+                    </div>
+
+                    <!-- Error State -->
+                    <div x-show="!isLoadingCloseRegister && closeRegisterError" class="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm text-red-700" x-text="closeRegisterError"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Data Loaded -->
+                    <div x-show="!isLoadingCloseRegister && closeRegisterData" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        
+                        <!-- Summary Card -->
+                        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+                            <h3 class="text-lg font-medium text-gray-900 border-b pb-2 mb-4">Ringkasan Sesi</h3>
+                            
+                            <dl class="space-y-4">
+                                <div class="flex justify-between items-center">
+                                    <dt class="text-sm text-gray-500">Waktu Buka</dt>
+                                    <dd class="text-sm font-medium text-gray-900" 
+                                        x-text="new Date(closeRegisterData?.session?.opened_at).toLocaleDateString('id-ID', {day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'})">
+                                    </dd>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <dt class="text-sm text-gray-500">Modal Awal</dt>
+                                    <dd class="text-sm font-medium text-gray-900" x-text="formatCurrency(closeRegisterData?.report?.opening_cash)"></dd>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <dt class="text-sm text-gray-500">Total Penjualan Tunai</dt>
+                                    <dd class="text-sm font-bold text-green-600" x-text="'+ ' + formatCurrency(closeRegisterData?.report?.cash_sales)"></dd>
+                                </div>
+                                <template x-if="closeRegisterData?.report?.cash_out > 0">
+                                    <div class="flex justify-between items-center">
+                                        <dt class="text-sm text-gray-500">Pengeluaran Kas</dt>
+                                        <dd class="text-sm font-bold text-red-600" x-text="'- ' + formatCurrency(closeRegisterData?.report?.cash_out)"></dd>
+                                    </div>
+                                </template>
+        
+                                <div class="pt-4 border-t flex justify-between items-center">
+                                    <dt class="text-base font-bold text-gray-900">Total Ekspektasi Sistem</dt>
+                                    <dd class="text-lg font-bold text-gray-900" x-text="formatCurrency(closeRegisterData?.report?.expected_cash)"></dd>
+                                </div>
+                            </dl>
+                        </div>
+
+                        <!-- Input Form -->
+                        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 h-full">
+                            <h3 class="text-lg font-medium text-gray-900 border-b pb-2 mb-4">Input Fisik Uang</h3>
+                            
+                            <form action="{{ route('cashier.shift.update') }}" method="POST" x-ref="closeRegisterForm">
+                                @csrf
+                                <div class="space-y-6">
+                                    <div>
+                                        <label for="closing_cash" class="block text-sm font-medium text-gray-700">Total Uang di Laci</label>
+                                        <div class="mt-1 relative rounded-md shadow-sm">
+                                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <span class="text-gray-500 sm:text-lg">Rp</span>
+                                            </div>
+                                            <input type="text" x-model="closingCashDisplay" @input="formatClosingCash" required autofocus
+                                                @keydown.enter.prevent="verifyCloseRegister()"
+                                                class="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 sm:text-lg border-gray-300 rounded-md py-3 font-medium transition-all"
+                                                placeholder="0">
+                                            <input type="hidden" name="closing_cash" x-model="closingCashValue">
+                                        </div>
+                                        <p class="mt-2 text-xs text-gray-500">Hitung semua uang tunai fisik yang ada di laci kasir.</p>
+                                    </div>
+
+                                    <div>
+                                        <label for="notes" class="block text-sm font-medium text-gray-700">Catatan (Opsional)</label>
+                                        <textarea name="notes" id="notes" rows="3" 
+                                            class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md mt-1"
+                                            placeholder="Alasan selisih, dll..."></textarea>
+                                    </div>
+
+                                    <div class="pt-4 space-y-3">
+                                        <button type="button" @click="verifyCloseRegister()"
+                                            class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-base font-bold text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors">
+                                            Tutup Register & Logout
+                                        </button>
+                                        
+                                        <button type="button" @click="closeCloseRegisterModal()"
+                                            class="w-full flex justify-center py-3 px-4 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none transition-colors">
+                                            Batal
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     @push('scripts')
@@ -663,6 +793,68 @@
                     confirmTitle: '',
                     confirmMessage: '',
                     confirmAction: null,
+
+                    // Close Register Modal
+                    showCloseRegisterModal: false,
+                    closeRegisterData: null,
+                    isLoadingCloseRegister: false,
+                    closeRegisterError: '',
+                    closingCashDisplay: '',
+                    closingCashValue: '',
+
+                    openCloseRegisterModal() {
+                        this.showCloseRegisterModal = true;
+                        this.isLoadingCloseRegister = true;
+                        this.closeRegisterData = null;
+                        this.closeRegisterError = '';
+                        this.closingCashValue = ''; // Reset input
+                        this.closingCashDisplay = '';
+
+                        fetch('{{ route("cashier.shift.summary") }}')
+                            .then(response => {
+                                if (!response.ok) throw new Error('Gagal memuat data sesi');
+                                return response.json();
+                            })
+                            .then(data => {
+                                this.closeRegisterData = data;
+                                this.isLoadingCloseRegister = false;
+                                console.log('Session Summary:', data);
+                            })
+                            .catch(error => {
+                                console.error('Error fetching session summary:', error);
+                                this.closeRegisterError = 'Gagal memuat ringkasan sesi. Silakan coba lagi.';
+                                this.isLoadingCloseRegister = false;
+                            });
+                    },
+
+                    closeCloseRegisterModal() {
+                        this.showCloseRegisterModal = false;
+                        this.closeRegisterData = null;
+                    },
+
+                    formatClosingCash(e) {
+                         let val = e.target.value.replace(/\D/g, '');
+                         this.closingCashValue = val;
+                         if (!val) {
+                             this.closingCashDisplay = '';
+                             return;
+                         }
+                         this.closingCashDisplay = new Intl.NumberFormat('id-ID').format(val);
+                    },
+
+                    verifyCloseRegister() {
+                        if (!this.closingCashValue && this.closingCashValue !== '0') {
+                            this.closeRegisterError = 'Total uang di laci wajib diisi.';
+                            return;
+                        }
+
+                        this.confirmTitle = 'Konfirmasi Tutup Register';
+                        this.confirmMessage = 'Apakah Anda yakin data sudah benar? Sesi akan ditutup dan Anda akan logout.';
+                        this.confirmAction = () => {
+                            this.$refs.closeRegisterForm.submit();
+                        };
+                        this.showConfirmModal = true;
+                    },
 
                     // Points Data (from event)
                     pointsDiscount: 0,

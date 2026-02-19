@@ -175,6 +175,9 @@ Route::middleware(['auth', 'role:cashier,admin'])->group(function () {
 
 
 
+        // Summary for Overlay
+        Route::get('/shift/summary', [ShiftController::class, 'summary'])->name('cashier.shift.summary');
+
         // Close Shift
         Route::get('/shift/close', [ShiftController::class, 'edit'])->name('cashier.shift.close');
         Route::post('/shift/close', [ShiftController::class, 'update'])->name('cashier.shift.update');

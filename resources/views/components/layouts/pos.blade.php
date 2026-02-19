@@ -34,10 +34,10 @@
                     </a>
                 @endif
 
-                <a href="{{ route('cashier.shift.close') }}"
-                    class="text-sm text-red-400 hover:text-red-300 border-l border-slate-600 pl-4">
+                <button x-data @click.prevent="$dispatch('open-close-register')"
+                    class="text-sm text-red-400 hover:text-red-300 border-l border-slate-600 pl-4 transition-colors">
                     Tutup Register
-                </a>
+                </button>
             </div>
         </header>
 

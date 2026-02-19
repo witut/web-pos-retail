@@ -77,6 +77,26 @@ class ShiftController extends Controller
     }
 
     /**
+     * Get session summary for JSON (POS Overlay)
+     */
+    public function summary()
+    {
+        $user = Auth::user();
+        $session = $this->shiftService->getCurrentSession($user);
+
+        if (!$session) {
+            return response()->json(['error' => 'No active session'], 404);
+        }
+
+        $report = $this->shiftService->getReport($session);
+
+        return response()->json([
+            'session' => $session,
+            'report' => $report
+        ]);
+    }
+
+    /**
      * Show form to close register (Z-Report)
      */
     public function edit()
