@@ -76,9 +76,10 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     });
 
 
-    // Settings
+    // Settings & Configurations
     Route::get('/settings', [\App\Http\Controllers\Admin\SettingController::class, 'index'])->name('settings.index');
     Route::post('/settings', [\App\Http\Controllers\Admin\SettingController::class, 'update'])->name('settings.update');
+    Route::resource('cash-registers', \App\Http\Controllers\Admin\CashRegisterController::class)->except(['show']);
 
     // Audit Logs
     Route::resource('audit-logs', \App\Http\Controllers\Admin\AuditLogController::class)->only(['index', 'show']);
@@ -115,6 +116,10 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 
     // Shift History
     Route::resource('shifts', \App\Http\Controllers\Admin\ShiftController::class)->only(['index', 'show']);
+
+    // Transactions History
+    Route::resource('transactions', \App\Http\Controllers\Admin\TransactionController::class)->only(['index', 'show']);
+    Route::post('transactions/{transaction}/returns', [\App\Http\Controllers\Admin\ReturnController::class, 'store'])->name('returns.store');
 });
 
 /*

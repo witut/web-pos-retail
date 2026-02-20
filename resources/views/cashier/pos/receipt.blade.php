@@ -192,11 +192,22 @@
             <tbody>
                 @foreach ($transaction->items as $item)
                     <tr>
-                        <td class="product-name">{{ Str::limit($item->product->name ?? $item->product_name, 15) }}</td>
+                        <td class="product-name">
+                            {{ Str::limit($item->product->name ?? $item->product_name, 15) }}
+                        </td>
                         <td class="qty">{{ number_format($item->qty) }}</td>
                         <td class="price">{{ number_format($item->unit_price) }}</td>
-                        <td class="subtotal">{{ number_format($item->subtotal) }}</td>
+                        <td class="subtotal">{{ number_format($item->subtotal + $item->discount_amount) }}</td>
+                        <!-- Gross Subtotal -->
                     </tr>
+                    @if($item->discount_amount > 0)
+                        <tr>
+                            <td colspan="3" style="text-align: right; font-size: 10px; color: #555;">Disc.
+                                {{ Str::limit($item->product->name ?? $item->product_name, 10) }}:</td>
+                            <td class="subtotal" style="font-size: 10px; color: #555;">
+                                -{{ number_format($item->discount_amount) }}</td>
+                        </tr>
+                    @endif
                 @endforeach
             </tbody>
         </table>
@@ -215,16 +226,7 @@
                     <td class="value">Rp {{ number_format($transaction->tax_amount) }}</td>
                 </tr>
             @endif
-            @php
-                $promoDiscount = $transaction->discount_amount - $transaction->coupon_discount_amount;
-            @endphp
 
-            @if ($promoDiscount > 0)
-                <tr>
-                    <td class="label">Diskon</td>
-                    <td class="value">-Rp {{ number_format($promoDiscount) }}</td>
-                </tr>
-            @endif
             @if ($transaction->coupon_discount_amount > 0)
                 <tr>
                     <td class="label">Kupon</td>

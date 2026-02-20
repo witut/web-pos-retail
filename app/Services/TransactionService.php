@@ -73,7 +73,8 @@ class TransactionService
             $preparedItems = $this->validateAndPrepareItems($cartItems);
 
             // 2. Calculate totals
-            $totals = $this->calculateTotal($preparedItems, $discountAmount);
+            // Pass ONLY the global coupon discount to calculateTotal, because item promos are already deducted via $preparedItems[$i]['subtotal']!
+            $totals = $this->calculateTotal($preparedItems, $couponDiscountAmount);
             $grandTotal = $totals['total'] - $pointsDiscount;
 
             // 3. Validate payment amount
@@ -136,6 +137,7 @@ class TransactionService
                     'unit_name' => $item['unit_name'],
                     'qty' => $item['qty'],
                     'unit_price' => $item['unit_price'],
+                    'discount_amount' => $item['discount_amount'] ?? 0,
                     'subtotal' => $item['subtotal'],
                     'cost_price' => $item['cost_price'], // HPP untuk profit calc
                 ]);
@@ -282,46 +284,202 @@ class TransactionService
      * @param array $items Prepared items dengan price & qty
      * @return array ['subtotal' => float, 'tax_amount' => float, 'total' => float]
      */
-    public function calculateTotal(array $items, float $discountAmount = 0): array
+    public function calculateTotal(array $items, float $globalDiscountAmount = 0): array
     {
-        $subtotal = 0;
+        $subtotalGross = 0;
+        $subtotalNet = 0;
 
         foreach ($items as $item) {
-            $subtotal += $item['subtotal'];
+            $subtotalNet += $item['subtotal'];
+            $subtotalGross += $item['subtotal'] + ($item['discount_amount'] ?? 0);
         }
 
-        // Apply global discount to base
-        // Note: This assumes simplified pro-ration or global deduction
-        $taxableBase = max(0, $subtotal - $discountAmount);
+        // Apply global coupon/point discount to base
+        // Note: $subtotalNet from items already has product-level promos deducted.
+        $taxableBase = max(0, $subtotalNet - $globalDiscountAmount);
 
         // Get tax settings
         $taxRate = Setting::getTaxRate();
         $taxType = Setting::get('tax_type', 'exclusive');
 
         if ($taxType === 'inclusive') {
-            // Formula: Tax = Total - (Total / (1 + Rate))
-            // Subtotal (DPP) = Total - Tax
             $total = round($taxableBase, 2); // In inclusive, base IS the total to pay
             $taxAmount = $total - ($total / (1 + ($taxRate / 100)));
-            $subtotalNet = $total - $taxAmount;
 
             return [
-                'subtotal' => round($subtotalNet, 2),
+                'subtotal' => round($subtotalGross, 2),
                 'tax_amount' => round($taxAmount, 2),
                 'total' => round($total, 2),
             ];
         }
 
         // Exclusive (Default)
-        // Tax calculated on Net Amount (Subtotal - Discount)
         $taxAmount = $taxableBase * ($taxRate / 100);
         $total = $taxableBase + $taxAmount;
 
         return [
-            'subtotal' => round($subtotal, 2),
+            'subtotal' => round($subtotalGross, 2),
             'tax_amount' => round($taxAmount, 2),
             'total' => round($total, 2),
         ];
+    }
+
+    /**
+     * Parse items for return and create the ProductReturn record
+     * 
+     * @param Transaction $transaction
+     * @param array $items Format: ['id' => transaction_item_id, 'qty' => return_qty, 'condition' => 'good'|'damaged']
+     * @param string $reason
+     * @param string|null $notes
+     * @param string $refundMethod
+     * @param int $userId
+     * @throws Exception
+     */
+    public function processReturn(
+        Transaction $transaction,
+        array $items,
+        string $reason,
+        ?string $notes,
+        string $refundMethod,
+        int $userId
+    ) {
+        if ($transaction->status !== 'completed') {
+            throw new Exception("Hanya transaksi completed yang bisa diretur.");
+        }
+
+        return DB::transaction(function () use ($transaction, $items, $reason, $notes, $refundMethod, $userId) {
+            $stockService = app(StockService::class);
+            $totalRefundAmount = 0;
+            $returnItemsData = [];
+
+            // Generate Return Number immediately so we can use it as reference_id for stock movements
+            $prefix = 'RET/' . now()->format('Y/m') . '/';
+            $lastReturn = \App\Models\ProductReturn::where('return_number', 'like', $prefix . '%')
+                ->lockForUpdate()
+                ->orderBy('id', 'desc')
+                ->first();
+
+            $newNumber = $lastReturn ? ((int) substr($lastReturn->return_number, -5)) + 1 : 1;
+            $returnNumber = $prefix . str_pad($newNumber, 5, '0', STR_PAD_LEFT);
+
+            foreach ($items as $itemData) {
+                // Find original transaction item
+                $trxItem = $transaction->items()->find($itemData['id']);
+
+                if (!$trxItem) {
+                    throw new Exception("Item transaksi tidak ditemukan.");
+                }
+
+                $qtyToReturn = (int) $itemData['qty'];
+
+                // Skip if quantity is 0
+                if ($qtyToReturn <= 0) {
+                    continue;
+                }
+
+                // Calculate already returned qty
+                $alreadyReturnedQty = 0;
+                foreach ($transaction->returns as $ret) {
+                    $match = $ret->returnItems->where('transaction_item_id', $trxItem->id)->first();
+                    if ($match) {
+                        $alreadyReturnedQty += $match->quantity;
+                    }
+                }
+
+                if (($alreadyReturnedQty + $qtyToReturn) > $trxItem->qty) {
+                    throw new Exception("Kuantitas retur melebihi maksimal untuk {$trxItem->product_name}");
+                }
+
+                // Calculate Net Price Per Unit exactly how it was paid
+                // We use subtotal (which is already unit_price * qty - discount)
+                // And divide it by the original qty
+                $netPricePerUnit = $trxItem->subtotal / $trxItem->qty;
+
+                $itemRefundAmountNet = $netPricePerUnit * $qtyToReturn;
+
+                // Get the total global discounts on this transaction
+                $globalDiscounts = $transaction->points_discount_amount + $transaction->coupon_discount_amount;
+
+                if ($globalDiscounts > 0 && $transaction->subtotal > 0) {
+                    // Spread the global discount proportionally across this item's subtotal
+                    $ratio = $itemRefundAmountNet / $transaction->subtotal;
+                    $itemRefundAmount = round($itemRefundAmountNet - ($globalDiscounts * $ratio));
+                } else {
+                    $itemRefundAmount = round($itemRefundAmountNet);
+                }
+
+                // Never refund less than 0
+                $itemRefundAmount = max(0, $itemRefundAmount);
+
+                $totalRefundAmount += $itemRefundAmount;
+
+                $returnItemsData[] = [
+                    'transaction_item_id' => $trxItem->id,
+                    'product_id' => $trxItem->product_id,
+                    'quantity' => $qtyToReturn,
+                    'unit_price' => $netPricePerUnit,
+                    'refund_amount' => $itemRefundAmount,
+                    'condition' => $itemData['condition'] ?? 'good'
+                ];
+
+                // Always restore stock (IN) from customer first
+                $stockService->restoreStock(
+                    $trxItem->product_id,
+                    $qtyToReturn,
+                    $trxItem->unit_name,
+                    'RETURN', // Updated from VOID to RETURN accurately tracking return origin
+                    $returnNumber,
+                    $userId,
+                    'Pengembalian stock dari retur transaksi'
+                );
+
+                // If condition is damaged, immediately write it off as an OUT movement
+                if (($itemData['condition'] ?? 'good') === 'damaged') {
+                    $stockService->deductStock(
+                        $trxItem->product_id,
+                        $qtyToReturn,
+                        $trxItem->unit_name,
+                        'RETURN',
+                        $returnNumber,
+                        $userId,
+                        'Barang rusak dari retur transaksi.'
+                    );
+                }
+            }
+
+            if (empty($returnItemsData)) {
+                throw new Exception("Tidak ada item valid untuk diretur.");
+            }
+
+            // Create Return Record
+            $productReturn = \App\Models\ProductReturn::create([
+                'return_number' => $returnNumber,
+                'transaction_id' => $transaction->id,
+                'user_id' => $userId,
+                'reason' => $reason,
+                'status' => 'completed', // Assuming auto-approve for now
+                'refund_amount' => $totalRefundAmount,
+                'refund_method' => $refundMethod,
+                'notes' => $notes,
+            ]);
+
+            // Save Return Items
+            foreach ($returnItemsData as $itemData) {
+                $itemData['product_return_id'] = $productReturn->id;
+                \App\Models\ProductReturnItem::create($itemData);
+            }
+
+            // Log Action
+            AuditLog::logAction(
+                'PRODUCT_RETURN',
+                'product_returns',
+                (string) $productReturn->id,
+                [],
+                $productReturn->toArray()
+            );
+
+            return $productReturn;
+        });
     }
 
     /**
@@ -363,14 +521,16 @@ class TransactionService
 
             // Calculate Cost Price per Unit (HPP base * conversion)
             $costPricePerUnit = $product->cost_price * $conversionRate;
+            $discountAmount = isset($item['discount_amount']) ? (float) $item['discount_amount'] : 0;
 
             $preparedItems[] = [
                 'product_id' => $product->id,
                 'product_name' => $product->name,
                 'unit_name' => $unitName,
                 'qty' => $item['qty'],
-                'unit_price' => $unitPrice,
-                'subtotal' => $unitPrice * $item['qty'],
+                'unit_price' => $unitPrice, // Harga asli per satuan
+                'discount_amount' => $discountAmount, // Total diskon untuk item ini
+                'subtotal' => ($unitPrice * $item['qty']) - $discountAmount, // Subtotal bersih (Net)
                 'cost_price' => $costPricePerUnit, // HPP per unit transaksi
             ];
         }

@@ -51,7 +51,40 @@ class ShiftController extends Controller
             return redirect()->route('pos.index');
         }
 
-        return view('cashier.shift.create');
+        // Check global active sessions limit
+        $maxRegisters = \App\Models\Setting::getMaxActiveRegisters();
+        $activeSessionsCount = \App\Models\CashRegisterSession::where('status', 'open')->count();
+        $maxReached = $activeSessionsCount >= $maxRegisters;
+
+        // Optionally get the active users to display who is currently using it
+        $activeUsers = [];
+        if ($maxReached) {
+            $activeUsers = \App\Models\CashRegisterSession::where('status', 'open')
+                ->with(['user', 'cashRegister'])
+                ->get()
+                ->map(function ($session) {
+                    $regName = $session->cashRegister ? " ({$session->cashRegister->name})" : "";
+                    return $session->user->name . $regName;
+                })
+                ->toArray();
+        }
+
+        // Get available registers that aren't currently open
+        $availableRegisters = collect();
+        if (!$maxReached) {
+            // Get IDs of registers currently in use
+            $usedRegisterIds = \App\Models\CashRegisterSession::where('status', 'open')
+                ->whereNotNull('cash_register_id')
+                ->pluck('cash_register_id')
+                ->toArray();
+
+            $availableRegisters = \App\Models\CashRegister::where('status', 'active')
+                ->whereNotIn('id', $usedRegisterIds)
+                ->orderBy('name')
+                ->get();
+        }
+
+        return view('cashier.shift.create', compact('maxReached', 'maxRegisters', 'activeUsers', 'availableRegisters'));
     }
 
     /**
@@ -59,15 +92,23 @@ class ShiftController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
-            'opening_cash' => 'required|numeric|min:0'
-        ]);
+        $maxRegisters = \App\Models\Setting::getMaxActiveRegisters();
+        $rules = [
+            'opening_cash' => 'required|numeric|min:0',
+        ];
+
+        if ($maxRegisters > 1) {
+            $rules['cash_register_id'] = 'required|exists:cash_registers,id';
+        }
+
+        $request->validate($rules);
 
         try {
             $this->shiftService->openSession(
                 Auth::user(),
                 $request->opening_cash,
-                $request->ip()
+                $request->ip(),
+                $request->cash_register_id ?? null
             );
 
             return redirect()->route('pos.index')->with('success', 'Register berhasil dibuka!');

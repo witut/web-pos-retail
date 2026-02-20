@@ -295,7 +295,16 @@ class POSController extends Controller
             }
 
             // Prepare items for TransactionService
-            $cartItems = $cartItemsForPromo; // Structure is same/compatible
+            // Use promoResult items because they contain the calculated discount_amount per item
+            $cartItems = array_map(function ($item) {
+                return [
+                    'product_id' => $item['product_id'],
+                    'qty' => $item['qty'],
+                    'price' => $item['price'],
+                    'unit_name' => $item['unit_name'],
+                    'discount_amount' => $item['discount_amount'] ?? 0,
+                ];
+            }, $promoResult['items']);
 
             // Prepare payment data
             $paymentData = [

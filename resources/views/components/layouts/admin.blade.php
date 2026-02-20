@@ -40,7 +40,9 @@
             </div>
 
             <!-- Navigation -->
-            <nav class="flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 space-y-1">
+            <nav x-ref="sidebarNav"
+                x-init="$nextTick(() => { let active = $refs.sidebarNav.querySelector('.bg-slate-800'); if(active) active.scrollIntoView({behavior: 'smooth', block: 'center'}); })"
+                class="flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 space-y-1">
                 <!-- Dashboard -->
                 <a href="{{ route('admin.dashboard') }}"
                     class="flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all group whitespace-nowrap
@@ -187,6 +189,19 @@
                 </div>
                 <div class="my-3 border-t border-slate-800" :class="!sidebarOpen ? 'block' : 'hidden'"></div>
 
+                <a href="{{ route('admin.transactions.index') }}"
+                    class="flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all group whitespace-nowrap
+                          {{ request()->routeIs('admin.transactions.*') ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white' }}"
+                    title="Daftar Transaksi">
+                    <svg class="w-5 h-5 flex-shrink-0 transition-colors" :class="sidebarOpen ? 'mr-3' : 'mr-0 mx-auto'"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                    </svg>
+                    <span class="font-medium transition-opacity duration-300"
+                        :class="sidebarOpen ? 'opacity-100' : 'opacity-0 hidden'">Daftar Transaksi</span>
+                </a>
+
                 <a href="{{ route('admin.shifts.index') }}"
                     class="flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all group whitespace-nowrap
                           {{ request()->routeIs('admin.shifts.*') ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white' }}"
@@ -294,16 +309,29 @@
                 <a href="{{ route('admin.settings.index') }}"
                     class="flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all group whitespace-nowrap
                         {{ request()->routeIs('admin.settings.*') ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white' }}"
-                    title="Pengaturan Toko">
+                    title="Pengaturan">
                     <svg class="w-5 h-5 flex-shrink-0 transition-colors" :class="sidebarOpen ? 'mr-3' : 'mr-0 mx-auto'"
-                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                        stroke="currentColor" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round"
                             d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                     <span class="font-medium transition-opacity duration-300"
                         :class="sidebarOpen ? 'opacity-100' : 'opacity-0 hidden'">Pengaturan</span>
+                </a>
+                <a href="{{ route('admin.cash-registers.index') }}"
+                    class="flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all group whitespace-nowrap
+                        {{ request()->routeIs('admin.cash-registers.*') ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white' }}"
+                    title="Mesin Kasir">
+                    <svg class="w-5 h-5 flex-shrink-0 transition-colors" :class="sidebarOpen ? 'mr-3' : 'mr-0 mx-auto'"
+                        xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                        stroke="currentColor" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0V12a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 12V5.25" />
+                    </svg>
+                    <span class="font-medium transition-opacity duration-300"
+                        :class="sidebarOpen ? 'opacity-100' : 'opacity-0 hidden'">Mesin Kasir</span>
                 </a>
 
                 <a href="{{ route('admin.audit-logs.index') }}"

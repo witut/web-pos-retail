@@ -101,20 +101,9 @@ class PromotionService
                 $couponDiscount = 0;
 
                 if ($coupon->type === 'percentage') {
-                    foreach ($itemsCollection as $item) {
-                        $itemDiscount = $item->subtotal * ($coupon->value / 100);
-                        $item->discount_amount += $itemDiscount;
-                        $couponDiscount += $itemDiscount;
-                    }
+                    $couponDiscount = $subtotal * ($coupon->value / 100);
                 } else {
                     $couponDiscount = $coupon->value;
-                    // Distribute fixed coupon proportionally
-                    if ($subtotal > 0) {
-                        foreach ($itemsCollection as $item) {
-                            $ratio = $item->subtotal / $subtotal;
-                            $item->discount_amount += $couponDiscount * $ratio;
-                        }
-                    }
                 }
 
                 $discountAmount += $couponDiscount;

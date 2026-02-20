@@ -19,20 +19,20 @@
 - [x] **Backend**: Update `Transaction` logic to save discount details
 
 ## Week 20: Shift Management
-- [ ] **Database Migration**: Create `shifts`, `cash_register_sessions`, `cash_movements` tables
-- [ ] **Models**: Create `Shift`, `CashRegisterSession`, `CashMovement`
-- [ ] **Middleware**: Ensure active session exists before processing sales
-- [ ] **UI/UX**:
-    - [ ] Login Intercept: "Open Register" modal if no session active
-    - [ ] Dashboard Widget: Current shift status linked to User
-    - [ ] "Close Register" page with cash counting form
-- [ ] **Reporting**:
-    - [ ] Z-Report generation (daily sales summary per register)
-    - [ ] Shift history view for Admins
+- [x] **Database Migration**: Create `shifts`, `cash_register_sessions`, `cash_movements` tables
+- [x] **Models**: Create `Shift`, `CashRegisterSession`, `CashMovement`
+- [x] **Middleware**: Ensure active session exists before processing sales
+- [x] **UI/UX**:
+    - [x] Login Intercept: "Open Register" modal if no session active
+    - [x] Dashboard Widget: Current shift status linked to User
+    - [x] "Close Register" page with cash counting form
+- [x] **Reporting**:
+    - [x] Z-Report generation (daily sales summary per register)
+    - [x] Shift history view for Admins
 
 ## Week 21: Return & Refund Management
-- [ ] **Database Migration**: Create `returns`, `return_items` tables
-- [ ] **Models**: Create `Return`, `ReturnItem`
+- [x] **Database Migration**: Create `returns`, `return_items` tables
+- [x] **Models**: Create `ProductReturn`, `ProductReturnItem`
 - [ ] **UI/UX**:
     - [ ] Transaction History: Add "Return" button on eligible operations
     - [ ] Return Request Form: Select items, quantity, condition, and reason

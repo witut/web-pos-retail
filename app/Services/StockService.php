@@ -139,7 +139,8 @@ class StockService
         string $unitName,
         string $referenceType,
         string $referenceId,
-        int $userId
+        int $userId,
+        ?string $notes = null
     ): void {
         $product = Product::findOrFail($productId);
 
@@ -174,7 +175,7 @@ class StockService
             'cost_price' => $product->cost_price * $conversionRate, // Cost proportional to unit
             'stock_before' => $oldStock,
             'stock_after' => $newStock,
-            'notes' => null,
+            'notes' => $notes,
             'user_id' => $userId,
         ]);
     }
@@ -196,7 +197,8 @@ class StockService
         string $unitName,
         string $referenceType,
         string $referenceId,
-        int $userId
+        int $userId,
+        ?string $notes = null
     ): void {
         $product = Product::findOrFail($productId);
 
@@ -221,7 +223,7 @@ class StockService
             'cost_price' => $product->cost_price * $conversionRate,
             'stock_before' => $oldStock,
             'stock_after' => $newStock,
-            'notes' => "Pengembalian stok dari void transaksi",
+            'notes' => $notes ?? "Pengembalian stok dari void transaksi",
             'user_id' => $userId,
         ]);
     }

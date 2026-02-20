@@ -142,6 +142,16 @@ class Transaction extends Model
         return $this->hasMany(TransactionItem::class);
     }
 
+    /**
+     * Get semua returns terkait transaksi ini
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function returns()
+    {
+        return $this->hasMany(ProductReturn::class);
+    }
+
     /*
     |--------------------------------------------------------------------------
     | SCOPES

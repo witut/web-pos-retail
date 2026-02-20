@@ -25,14 +25,37 @@ class ShiftService
     /**
      * Open a new shift/session
      */
-    public function openSession(User $user, float $openingCash, ?string $ipAddress = null)
+    public function openSession(User $user, float $openingCash, ?string $ipAddress = null, ?int $cashRegisterId = null)
     {
-        // Check if already open
+        // Check if already open for this user
         if ($this->getCurrentSession($user)) {
             throw new Exception("Anda sudah memiliki sesi kasir yang aktif.");
         }
 
-        return DB::transaction(function () use ($user, $openingCash, $ipAddress) {
+        // Enforce global active session limit
+        $maxRegisters = \App\Models\Setting::getMaxActiveRegisters();
+        $activeSessionsCount = CashRegisterSession::where('status', 'open')->count();
+
+        if ($activeSessionsCount >= $maxRegisters) {
+            throw new Exception("Batas maksimal {$maxRegisters} register aktif telah tercapai. Harap tutup sesi kasir lain terlebih dahulu.");
+        }
+
+        // Validate Cash Register if maxRegisters > 1 and it's provided
+        if ($maxRegisters > 1 && !$cashRegisterId) {
+            throw new Exception("Anda harus memilih mesin kasir.");
+        }
+
+        if ($cashRegisterId) {
+            $isRegisterInUse = CashRegisterSession::where('status', 'open')
+                ->where('cash_register_id', $cashRegisterId)
+                ->exists();
+
+            if ($isRegisterInUse) {
+                throw new Exception("Mesin kasir ini sedang digunakan oleh kasir lain.");
+            }
+        }
+
+        return DB::transaction(function () use ($user, $openingCash, $ipAddress, $cashRegisterId) {
             // 1. Create or Get Active Shift
             // Logic: If user has an active shift (attendance), reuse it. Else create new.
             // For simplicity, we'll create a new shift if none active for today
@@ -42,6 +65,16 @@ class ShiftService
                 ->first();
 
             if (!$shift) {
+                // Cek Batas Pergantian Shift per Hari
+                $maxShifts = (int) \App\Models\Setting::get('shift.shifts_per_day', 3);
+                $todayShiftsCount = Shift::where('user_id', $user->id)
+                    ->whereDate('start_time', Carbon::today())
+                    ->count();
+
+                if ($todayShiftsCount >= $maxShifts) {
+                    throw new Exception("Anda telah mencapai batas maksimal pergantian shift hari ini ({$maxShifts} kali).");
+                }
+
                 $shift = Shift::create([
                     'user_id' => $user->id,
                     'start_time' => now(),
@@ -54,6 +87,7 @@ class ShiftService
             $session = CashRegisterSession::create([
                 'user_id' => $user->id,
                 'shift_id' => $shift->id,
+                'cash_register_id' => $cashRegisterId,
                 'opening_cash' => $openingCash,
                 'opened_at' => now(),
                 'status' => 'open'

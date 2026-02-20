@@ -36,12 +36,22 @@
         </div>
     </div>
 
+    <!-- Baris untuk pengaturan jumlah waktu shift per hari -->
     <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Jumlah Shift per Hari</label>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Batas Pergantian Shift per Hari</label>
         <input type="number" name="shift.shifts_per_day" min="1" max="10"
             value="{{ old('shift.shifts_per_day', $settings['shift.shifts_per_day'] ?? '3') }}"
             class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 sm:text-sm sm:w-1/3">
-        <p class="text-xs text-gray-500 mt-1">Hanya berlaku jika mode multiple shift</p>
+        <p class="text-xs text-gray-500 mt-1">Hanya berlaku jika mode multiple shift. (Contoh: Buka pagi, siang, dan malam = 3 pergantian shift)</p>
+    </div>
+
+    <!-- Baris baru untuk pembatasan jumlah kasir aktif bersamaan -->
+    <div class="border-t pt-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Maksimal Kasir Bersamaan (Register Aktif)</label>
+        <input type="number" name="max_active_registers" min="1" max="50"
+            value="{{ old('max_active_registers', $settings['max_active_registers'] ?? '1') }}"
+            class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 sm:text-sm sm:w-1/3">
+        <p class="text-xs text-blue-600 mt-1">Angka ini menentukan berapa banyak perangkat kasir (POS) yang boleh login dan melakukan transaksi secara <strong>bersamaan</strong>.</p>
     </div>
 
     <div class="border-t pt-4">

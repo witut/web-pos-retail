@@ -82,6 +82,7 @@ class SettingController extends Controller
             'discount.rounding',
 
             // Shift
+            'max_active_registers',
             'shift.mode',
             'shift.shifts_per_day',
             'shift.require_opening_balance',
@@ -117,17 +118,67 @@ class SettingController extends Controller
         $oldSettings = Setting::allSettings();
 
         foreach ($allowedKeys as $key) {
-            if ($request->has($key)) {
-                $newValue = $request->input($key);
+            // Because HTML inputs like name="shift.mode" or name="shift[mode]" 
+            // are converted to nested arrays by PHP (e.g. ['shift' => ['mode' => '...']])
+            // We use dot notation access via $request->input() to retrieve the value properly.
+            // But checkboxes might not be present in request if unchecked.
+
+            // To handle unchecked checkboxes (which don't send anything in POST request)
+            // we should assume an empty/false value if it's an expected boolean checkbox key.
+            // However, a simpler approach is to flatten the incoming request array first
+            // to match our dot-notation keys.
+
+            $inputVal = \Illuminate\Support\Arr::get($request->all(), str_replace('.', '_', $key)); // Form sends shift_mode
+            // Actually, HTML names like `shift.mode` become `shift_mode` in plain PHP $_POST
+            // Wait, Laravel handles `name="shift.mode"` weirdly. Let's look at the view:
+            // The view uses: name="shift.shifts_per_day" (literal dot name)
+            // PHP automatically converts dots in input names to underscores!
+            // So 'shift.shifts_per_day' becomes 'shift_shifts_per_day' in the request!
+
+            $phpKey = str_replace('.', '_', $key);
+
+            if ($request->has($phpKey)) {
+                $newValue = $request->input($phpKey);
                 $oldValue = $oldSettings[$key] ?? null;
 
-                // Simple comparison (loose)
                 if ($oldValue != $newValue) {
                     $changes[$key] = [
                         'old' => $oldValue,
                         'new' => $newValue,
                     ];
                     Setting::set($key, $newValue);
+                }
+            } else {
+                // If it's a checkbox and wasn't sent, it means it was unchecked.
+                // We know these keys are checkboxes from the View.
+                $checkboxKeys = [
+                    'shift.require_opening_balance',
+                    'shift.require_close_before_logout',
+                    'shift.require_pin_on_variance',
+                    'return.enabled',
+                    'return.restore_stock',
+                    'return.require_photo',
+                    'printer.auto_cut',
+                    'printer.open_drawer',
+                    'backup_enabled',
+                    'backup_email_notification',
+                    'customer.required',
+                    'customer.loyalty_enabled',
+                    'customer.points_with_discount',
+                    'discount.cashier_manual_allowed',
+                    'discount.allow_stacking'
+                ];
+
+                if (in_array($key, $checkboxKeys)) {
+                    $newValue = '0';
+                    $oldValue = $oldSettings[$key] ?? '0';
+                    if ($oldValue != $newValue) {
+                        $changes[$key] = [
+                            'old' => $oldValue,
+                            'new' => $newValue,
+                        ];
+                        Setting::set($key, $newValue);
+                    }
                 }
             }
         }

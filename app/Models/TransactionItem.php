@@ -36,6 +36,7 @@ class TransactionItem extends Model
         'unit_name',
         'qty',
         'unit_price',
+        'discount_amount',
         'subtotal',
         'cost_price',
     ];
@@ -43,6 +44,7 @@ class TransactionItem extends Model
     protected $casts = [
         'qty' => 'decimal:2',
         'unit_price' => 'decimal:2',
+        'discount_amount' => 'decimal:2',
         'subtotal' => 'decimal:2',
         'cost_price' => 'decimal:2',
     ];
@@ -71,6 +73,16 @@ class TransactionItem extends Model
     public function product()
     {
         return $this->belongsTo(Product::class);
+    }
+
+    /**
+     * Get rincian return untuk item ini
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function returnItems()
+    {
+        return $this->hasMany(ProductReturnItem::class);
     }
 
     /*

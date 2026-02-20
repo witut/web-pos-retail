@@ -204,4 +204,15 @@ class Setting extends Model
     {
         return self::get('receipt_footer', 'Terima Kasih Atas Kunjungan Anda');
     }
+
+    /**
+     * Get maximum active registers allowed
+     * Default: 1 
+     * 
+     * @return int
+     */
+    public static function getMaxActiveRegisters(): int
+    {
+        return (int) self::get('max_active_registers', 1);
+    }
 }
