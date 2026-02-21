@@ -180,6 +180,9 @@ Route::middleware(['auth', 'role:cashier,admin'])->group(function () {
             // Returns API
             Route::get('/transactions/search-invoice', [\App\Http\Controllers\Api\PosTransactionController::class, 'searchByInvoice'])->name('transactions.search-invoice');
             Route::post('/transactions/{transaction}/returns-with-pin', [\App\Http\Controllers\Api\PosReturnController::class, 'storeWithPin'])->name('returns.store-with-pin');
+
+            // Print API
+            Route::get('/transactions/{transaction}/print-payload', [\App\Http\Controllers\Api\PrinterController::class, 'getPayload'])->name('transactions.print-payload');
         });
 
 

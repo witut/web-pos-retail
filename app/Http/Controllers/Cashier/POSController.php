@@ -24,23 +24,28 @@ use Illuminate\Http\Request;
  * - Post-Checkout: Stock deduction via TransactionService (atomic)
  * - Void requires Admin PIN via TransactionService
  */
+use App\Services\PrinterService;
+
 class POSController extends Controller
 {
     protected TransactionService $transactionService;
     protected CustomerService $customerService;
     protected SettingService $settingService;
     protected PromotionService $promotionService;
+    protected PrinterService $printerService;
 
     public function __construct(
         TransactionService $transactionService,
         CustomerService $customerService,
         SettingService $settingService,
-        PromotionService $promotionService
+        PromotionService $promotionService,
+        PrinterService $printerService
     ) {
         $this->transactionService = $transactionService;
         $this->customerService = $customerService;
         $this->settingService = $settingService;
         $this->promotionService = $promotionService;
+        $this->printerService = $printerService;
     }
 
     /**
@@ -52,6 +57,13 @@ class POSController extends Controller
         // Get tax settings
         $taxRate = Setting::getTaxRate();
         $taxType = Setting::get('tax_type', 'exclusive');
+
+        // Get printer settings
+        $printerSettings = [
+            'type' => Setting::get('printer.type', 'browser'),
+            'server_url' => Setting::get('printer.server_url', 'http://localhost:9100'),
+            'paper_width' => Setting::get('printer.paper_width', '58'),
+        ];
 
         // Get today's transactions (untuk history view)
         $todayTransactions = Transaction::today()
@@ -68,7 +80,7 @@ class POSController extends Controller
         $shiftService = app(\App\Services\ShiftService::class);
         $session = $shiftService->getCurrentSession(auth()->user());
 
-        return view('cashier.pos.index', compact('taxRate', 'taxType', 'todayTransactions', 'cashierCanCreate', 'session'));
+        return view('cashier.pos.index', compact('taxRate', 'taxType', 'printerSettings', 'todayTransactions', 'cashierCanCreate', 'session'));
     }
 
     /**
@@ -367,6 +379,7 @@ class POSController extends Controller
                 'invoice_number' => $transaction->invoice_number,
                 'transaction_id' => $transaction->id,
                 'total' => $transaction->total,
+                'print_payload' => collect($this->printerService->generatePrintPayload($transaction))->toArray(),
             ]);
 
         } catch (\Exception $e) {
@@ -409,7 +422,7 @@ class POSController extends Controller
     }
 
     /**
-     * Print receipt
+     * Print receipt or faktur
      * 
      * @param Transaction $transaction
      */
@@ -426,6 +439,12 @@ class POSController extends Controller
         $storePhone = Setting::get('store_phone', '08123456789');
         $receiptFooter = Setting::getReceiptFooter();
         $taxType = Setting::get('tax_type', 'exclusive');
+
+        $paperWidth = Setting::get('printer.paper_width', '80');
+
+        if ($paperWidth === 'faktur') {
+            return view('cashier.pos.faktur', compact('transaction', 'storeName', 'storeAddress', 'storePhone', 'receiptFooter', 'taxType'));
+        }
 
         return view('cashier.pos.receipt', compact('transaction', 'storeName', 'storeAddress', 'storePhone', 'receiptFooter', 'taxType'));
     }

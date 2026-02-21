@@ -14,7 +14,9 @@
         body {
             font-family: 'Courier New', Courier, monospace;
             font-size: 12px;
-            width: 80mm;
+            width:
+                {{ \App\Models\Setting::get('printer.paper_width', '80') }}
+                mm;
             padding: 10px;
             background: white;
             margin: 0 auto;

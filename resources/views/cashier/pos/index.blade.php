@@ -946,6 +946,7 @@
                     isUpdatingFromServer: false,
                     taxRate: {{ $taxRate ?? 0 }},
                     taxType: '{{ $taxType ?? 'exclusive' }}',
+                    printerSettings: @json($printerSettings ?? []),
                     amountPaid: 0,
                     paymentMethod: 'cash',
                     showPaymentModal: false,
@@ -1743,8 +1744,12 @@
                             this.closePaymentModal();
                             this.showSuccessModal = true;
 
-                            // Auto-focus print receipt button
+                            // Auto-focus print receipt button (and auto-print for ESC/POS)
                             this.$nextTick(() => {
+                                if (this.printerSettings.type === 'escpos') {
+                                    this.printReceipt(data.print_payload);
+                                }
+                                
                                 if (this.$refs.printReceiptBtn) {
                                     this.$refs.printReceiptBtn.focus();
                                 }
@@ -1763,9 +1768,42 @@
                         }
                     },
 
-                    printReceipt() {
-                        if (this.lastTransactionId) {
-                            window.open(`/pos/transaction/${this.lastTransactionId}/print`, '_blank');
+                    async printReceipt(payload = null) {
+                        try {
+                            if (this.printerSettings.type === 'escpos') {
+                                console.log('Mencetak via Print Server (ESC/POS)...');
+                                
+                                // Jika tidak ada payload (misal di-klik tombol Reprint), fetch dari server.
+                                if (!payload && this.lastTransactionId) {
+                                    const res = await fetch(`/pos/transactions/${this.lastTransactionId}/print-payload`);
+                                    const d = await res.json();
+                                    if (d.success) {
+                                        payload = d.data;
+                                    } else {
+                                        throw new Error("Gagal mengambil data struk");
+                                    }
+                                }
+
+                                if (payload) {
+                                    const printRes = await fetch(this.printerSettings.server_url + '/print', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json'
+                                        },
+                                        body: JSON.stringify(payload)
+                                    });
+                                    if (!printRes.ok) throw new Error("Print Server tidak merespon (Pastikan Print Server berjalan di " + this.printerSettings.server_url + ")");
+                                    console.log("Struk berhasil dikirim ke Print Server");
+                                }
+                            } else {
+                                // Default Browser Print (window.print)
+                                if (this.lastTransactionId) {
+                                    window.open(`/pos/transaction/${this.lastTransactionId}/print`, '_blank');
+                                }
+                            }
+                        } catch (e) {
+                            console.error("Print Error:", e);
+                            alert("Gagal mencetak struk: " + e.message);
                         }
                     },
 
