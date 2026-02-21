@@ -64,17 +64,14 @@ class PromotionService
                     $promoDiscount += $itemDiscount;
                 }
             } elseif ($promotion->type === 'fixed_amount') {
-                // Fixed amount (once per transaction usually)
-                // Fixed amount (once per transaction usually)
-                $promoDiscount = $promotion->value;
+                // Fixed amount PER ITEM QTY for applicable items
+                foreach ($applicableItems as $item) {
+                    // Maximum discount per item is its price (cannot be negative price)
+                    $discountPerUnit = min($promotion->value, $item->price);
+                    $itemDiscount = $discountPerUnit * $item->qty;
 
-                // Distribute fixed amount proportionally to applicable items (optional but good for refund logic)
-                $itemsSubtotal = $applicableItems->sum('subtotal');
-                if ($itemsSubtotal > 0) {
-                    foreach ($applicableItems as $item) {
-                        $ratio = $item->subtotal / $itemsSubtotal;
-                        $item->discount_amount += $promoDiscount * $ratio;
-                    }
+                    $item->discount_amount += $itemDiscount;
+                    $promoDiscount += $itemDiscount;
                 }
             } elseif ($promotion->type === 'buy_x_get_y') {
                 // Simplified Buy X Get Y logic: Discount = Price of Y

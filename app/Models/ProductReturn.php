@@ -10,6 +10,7 @@ class ProductReturn extends Model
         'return_number',
         'transaction_id',
         'user_id',
+        'authorized_by_id',
         'reason',
         'status',
         'refund_amount',
@@ -25,6 +26,11 @@ class ProductReturn extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function authorizedBy()
+    {
+        return $this->belongsTo(User::class, 'authorized_by_id');
     }
 
     public function returnItems()

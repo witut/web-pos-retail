@@ -425,8 +425,9 @@ class POSController extends Controller
         $storeAddress = Setting::get('store_address', 'Jl. Contoh No. 123');
         $storePhone = Setting::get('store_phone', '08123456789');
         $receiptFooter = Setting::getReceiptFooter();
+        $taxType = Setting::get('tax_type', 'exclusive');
 
-        return view('cashier.pos.receipt', compact('transaction', 'storeName', 'storeAddress', 'storePhone', 'receiptFooter'));
+        return view('cashier.pos.receipt', compact('transaction', 'storeName', 'storeAddress', 'storePhone', 'receiptFooter', 'taxType'));
     }
 
     /**

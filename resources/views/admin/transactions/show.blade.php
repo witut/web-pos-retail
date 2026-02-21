@@ -1,3 +1,17 @@
+@php
+    $hasReturnableItems = false;
+    if ($transaction->status === 'completed') {
+        $hasReturnableItems = $transaction->items->contains(function ($item) use ($transaction) {
+            $returnedQty = 0;
+            foreach ($transaction->returns as $ret) {
+                foreach ($ret->returnItems->where('transaction_item_id', $item->id) as $match) {
+                    $returnedQty += $match->quantity;
+                }
+            }
+            return ($item->qty - $returnedQty) > 0;
+        });
+    }
+@endphp
 <x-layouts.admin title="Detail Transaksi #{{ $transaction->invoice_number }}">
     <div class="mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -10,7 +24,7 @@
                 class="px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
                 Kembali
             </a>
-            @if($transaction->status === 'completed' && $transaction->returns->isEmpty())
+            @if($transaction->status === 'completed' && $hasReturnableItems)
                 <button type="button" @click.prevent.stop="$dispatch('open-return-modal')"
                     class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
                     <div class="flex items-center">
@@ -297,51 +311,53 @@
     <!-- Return Modal -->
     @if($transaction->status === 'completed' && $hasReturnableItems)
         <div x-data="{ 
-                                                        open: false,
-                                                        items: {{ Js::from($transaction->items->map(function ($i) use ($transaction) {
+                                                            open: false,
+                                                            items: {{ Js::from($transaction->items->map(function ($i) use ($transaction) {
             $returnedQty = 0;
             foreach ($transaction->returns as $ret) {
-                $match = $ret->returnItems->where('transaction_item_id', $i->id)->first();
-                if ($match)
+                foreach ($ret->returnItems->where('transaction_item_id', $i->id) as $match) {
                     $returnedQty += $match->quantity;
+                }
             }
             $netPrice = $i->qty > 0 ? ($i->subtotal / $i->qty) : 0;
-            return ['id' => $i->id, 'name' => $i->product_name, 'price' => $i->unit_price, 'netPrice' => $netPrice, 'maxQty' => max(0, $i->qty - $returnedQty), 'returnQty' => 0, 'condition' => 'good']; })) }},
-                                                        reason: '',
-                                                        notes: '',
-                                                        refundMethod: 'cash',
-                                                        get globalDiscounts() {
-                                                            return {{ $transaction->points_discount_amount + $transaction->coupon_discount_amount }};
-                                                        },
-                                                        get totalRefund() {
-                                                            return Math.round(this.items.reduce((sum, item) => {
-                                                                let itemNetRefund = item.netPrice * item.returnQty;
+            return ['id' => $i->id, 'name' => $i->product_name, 'price' => $i->unit_price, 'netPrice' => $netPrice, 'maxQty' => max(0, $i->qty - $returnedQty), 'returnQty' => 0, 'condition' => 'good'];
+        })->filter(function ($i) {
+            return $i['maxQty'] > 0; })->values()) }},
+                                                            reason: '',
+                                                            notes: '',
+                                                            refundMethod: 'cash',
+                                                            get globalDiscounts() {
+                                                                return {{ $transaction->points_discount_amount + $transaction->coupon_discount_amount }};
+                                                            },
+                                                            get totalRefund() {
+                                                                return Math.round(this.items.reduce((sum, item) => {
+                                                                    let itemNetRefund = item.netPrice * item.returnQty;
 
-                                                                if (this.globalDiscounts > 0 && {{ $transaction->subtotal }} > 0) {
-                                                                    let ratio = itemNetRefund / {{ $transaction->subtotal }};
-                                                                    itemNetRefund = itemNetRefund - (this.globalDiscounts * ratio);
+                                                                    if (this.globalDiscounts > 0 && {{ $transaction->subtotal }} > 0) {
+                                                                        let ratio = itemNetRefund / {{ $transaction->subtotal }};
+                                                                        itemNetRefund = itemNetRefund - (this.globalDiscounts * ratio);
+                                                                    }
+
+                                                                    return sum + Math.max(0, itemNetRefund);
+                                                                }, 0));
+                                                            },
+                                                            get hasValidItems() {
+                                                                return this.totalRefund > 0;
+                                                            },
+                                                            submitForm() {
+                                                                if(!this.hasValidItems) {
+                                                                    alert('Pilih minimal 1 item untuk diretur');
+                                                                    return;
                                                                 }
-
-                                                                return sum + Math.max(0, itemNetRefund);
-                                                            }, 0));
-                                                        },
-                                                        get hasValidItems() {
-                                                            return this.totalRefund > 0;
-                                                        },
-                                                        submitForm() {
-                                                            if(!this.hasValidItems) {
-                                                                alert('Pilih minimal 1 item untuk diretur');
-                                                                return;
+                                                                if(this.reason.trim() === '') {
+                                                                    alert('Alasan retur wajib diisi');
+                                                                    return;
+                                                                }
+                                                                if(confirm('Proses retur senilai Rp ' + this.totalRefund.toLocaleString('id-ID') + '? Aksi ini tidak dapat dibatalkan.')) {
+                                                                    document.getElementById('returnForm').submit();
+                                                                }
                                                             }
-                                                            if(this.reason.trim() === '') {
-                                                                alert('Alasan retur wajib diisi');
-                                                                return;
-                                                            }
-                                                            if(confirm('Proses retur senilai Rp ' + this.totalRefund.toLocaleString('id-ID') + '? Aksi ini tidak dapat dibatalkan.')) {
-                                                                document.getElementById('returnForm').submit();
-                                                            }
-                                                        }
-                                                    }" @open-return-modal.window="open = true" x-show="open"
+                                                        }" @open-return-modal.window="open = true" x-show="open"
             class="fixed inset-0 z-50 overflow-y-auto" style="display: none;">
 
             <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
@@ -415,10 +431,10 @@
                                                             <span class="text-sm font-bold text-red-600"
                                                                 x-show="item.returnQty > 0">
                                                                 Rp <span x-text="Math.round(
-                                                                                    globalDiscounts > 0 && {{ $transaction->subtotal }} > 0 ?
-                                                                                    (item.netPrice * item.returnQty) - (globalDiscounts * ((item.netPrice * item.returnQty) / {{ $transaction->subtotal }})) :
-                                                                                    (item.netPrice * item.returnQty)
-                                                                                ).toLocaleString('id-ID')"></span>
+                                                                                        globalDiscounts > 0 && {{ $transaction->subtotal }} > 0 ?
+                                                                                        (item.netPrice * item.returnQty) - (globalDiscounts * ((item.netPrice * item.returnQty) / {{ $transaction->subtotal }})) :
+                                                                                        (item.netPrice * item.returnQty)
+                                                                                    ).toLocaleString('id-ID')"></span>
                                                             </span>
                                                         </div>
                                                     </div>

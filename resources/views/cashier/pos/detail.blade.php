@@ -8,6 +8,15 @@
                     <p class="font-mono text-slate-600">{{ $transaction->invoice_number }}</p>
                 </div>
                 <div class="flex items-center space-x-3">
+                    @if ($transaction->status === 'completed')
+                        <a href="{{ route('pos.index') }}?return_invoice={{ urlencode($transaction->invoice_number) }}"
+                            class="inline-flex items-center px-4 py-2 border border-transparent bg-orange-100 text-orange-700 font-medium rounded-lg hover:bg-orange-200 transition-colors">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z" />
+                            </svg>
+                            Retur (F10)
+                        </a>
+                    @endif
                     <a href="{{ route('pos.transaction.print', $transaction) }}" target="_blank"
                         class="inline-flex items-center px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-900">
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -203,7 +203,8 @@
                     @if($item->discount_amount > 0)
                         <tr>
                             <td colspan="3" style="text-align: right; font-size: 10px; color: #555;">Disc.
-                                {{ Str::limit($item->product->name ?? $item->product_name, 10) }}:</td>
+                                {{ Str::limit($item->product->name ?? $item->product_name, 10) }}:
+                            </td>
                             <td class="subtotal" style="font-size: 10px; color: #555;">
                                 -{{ number_format($item->discount_amount) }}</td>
                         </tr>
@@ -216,33 +217,54 @@
 
         <!-- Totals -->
         <table class="totals">
-            <tr>
-                <td class="label">Subtotal</td>
-                <td class="value">Rp {{ number_format($transaction->subtotal) }}</td>
-            </tr>
-            @if ($transaction->tax_amount > 0)
-                <tr>
-                    <td class="label">PPN</td>
-                    <td class="value">Rp {{ number_format($transaction->tax_amount) }}</td>
-                </tr>
-            @endif
+            @php
+                $globalDiscount = $transaction->coupon_discount_amount + $transaction->points_discount_amount + $transaction->discount_amount;
+            @endphp
 
-            @if ($transaction->coupon_discount_amount > 0)
+            @if ($taxType === 'inclusive')
                 <tr>
-                    <td class="label">Kupon</td>
-                    <td class="value">-Rp {{ number_format($transaction->coupon_discount_amount) }}</td>
+                    <td class="label">Subtotal</td>
+                    <td class="value">Rp {{ number_format($transaction->subtotal) }}</td>
+                </tr>
+                @if ($globalDiscount > 0)
+                    <tr>
+                        <td class="label">Diskon</td>
+                        <td class="value">-Rp {{ number_format($globalDiscount) }}</td>
+                    </tr>
+                @endif
+                <tr class="grand-total">
+                    <td class="label"><strong>Total</strong></td>
+                    <td class="value"><strong>Rp {{ number_format($transaction->total) }}</strong></td>
+                </tr>
+                @if ($transaction->tax_amount > 0)
+                    <tr>
+                        <td colspan="2" style="text-align: right; font-size: 10px; color: #555; padding-top: 2px;">
+                            Sudah termasuk ppn Rp {{ number_format($transaction->tax_amount) }}
+                        </td>
+                    </tr>
+                @endif
+            @else
+                <tr>
+                    <td class="label">Subtotal</td>
+                    <td class="value">Rp {{ number_format($transaction->subtotal) }}</td>
+                </tr>
+                @if ($globalDiscount > 0)
+                    <tr>
+                        <td class="label">Diskon</td>
+                        <td class="value">-Rp {{ number_format($globalDiscount) }}</td>
+                    </tr>
+                @endif
+                @if ($transaction->tax_amount > 0)
+                    <tr>
+                        <td class="label">PPN</td>
+                        <td class="value">Rp {{ number_format($transaction->tax_amount) }}</td>
+                    </tr>
+                @endif
+                <tr class="grand-total">
+                    <td class="label"><strong>Total</strong></td>
+                    <td class="value"><strong>Rp {{ number_format($transaction->total) }}</strong></td>
                 </tr>
             @endif
-            @if ($transaction->points_discount_amount > 0)
-                <tr>
-                    <td class="label">Diskon Poin</td>
-                    <td class="value">-Rp {{ number_format($transaction->points_discount_amount) }}</td>
-                </tr>
-            @endif
-            <tr class="grand-total">
-                <td class="label"><strong>TOTAL</strong></td>
-                <td class="value"><strong>Rp {{ number_format($transaction->total) }}</strong></td>
-            </tr>
         </table>
 
         <!-- Payment Info -->

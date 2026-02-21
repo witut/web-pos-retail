@@ -263,13 +263,17 @@
                     </span>
                 </button>
 
-                <div class="grid grid-cols-2 gap-2">
+                <div class="grid grid-cols-3 gap-2">
                     <button type="button" @click.prevent="console.log('Batal clicked'); confirmClearCart()"
-                        class="py-2 bg-red-100 text-red-700 font-medium rounded-lg hover:bg-red-200 transition-colors cursor-pointer">
+                        class="py-2 bg-red-100 text-red-700 font-medium rounded-lg hover:bg-red-200 transition-colors cursor-pointer text-sm">
                         Batal (ESC)
                     </button>
+                    <button type="button" @click="openReturnModal()"
+                        class="py-2 bg-orange-100 text-orange-700 font-medium rounded-lg hover:bg-orange-200 transition-colors cursor-pointer text-sm">
+                        Retur (F10)
+                    </button>
                     <a href="{{ route('pos.history') }}"
-                        class="py-2 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 transition-colors text-center">
+                        class="py-2 flex justify-center items-center bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 transition-colors text-center text-sm">
                         Riwayat (F9)
                     </a>
                 </div>
@@ -548,6 +552,166 @@
             </div>
         </div>
 
+        <!-- Return Modal -->
+        <div x-show="showReturnModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+            @keydown.escape.window="if(showReturnModal) closeReturnModal()">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col mx-4"
+                @click.outside="closeReturnModal()">
+                
+                <div class="px-6 py-4 bg-orange-600 text-white flex justify-between items-center rounded-t-2xl flex-shrink-0">
+                    <h3 class="text-xl font-bold flex items-center">
+                        <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z"></path></svg>
+                        Retur Transaksi & Supervisor Override
+                    </h3>
+                    <button @click="closeReturnModal()" class="text-white hover:text-orange-200">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+
+                <div class="p-6 overflow-y-auto flex-1 custom-scrollbar">
+                    
+                    <!-- Search Invoice Form -->
+                    <div x-show="!returnTransaction && !returnSuccess" class="space-y-4">
+                        <p class="text-gray-600">Masukkan Nomor Invoice pelanggan untuk memproses retur barang langsung dari POS. Dibutuhkan <strong>PIN Admin/Supervisor</strong> untuk menyelesaikan proses.</p>
+                        <div class="flex space-x-3 mt-4">
+                            <input type="text" x-model="returnSearchInvoice" x-ref="returnInvoiceInput"
+                                @keydown.enter="searchReturnInvoice()"
+                                placeholder="Contoh: INV/2026/..."
+                                class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 uppercase text-lg">
+                            <button @click="searchReturnInvoice()" :disabled="isProcessingReturn"
+                                class="px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium disabled:opacity-50 flex items-center">
+                                <svg x-show="isProcessingReturn" class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Cari Invoice
+                            </button>
+                        </div>
+                        
+                        <div x-show="returnError" x-collapse>
+                            <div class="mt-4 p-4 items-start bg-red-50 text-red-700 rounded-lg border border-red-200 flex">
+                                <svg class="w-5 h-5 mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                <span x-text="returnError"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Success Message -->
+                    <div x-show="returnSuccess" x-transition.duration.500ms class="text-center py-10">
+                        <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                        </div>
+                        <h4 class="text-2xl font-bold text-gray-800 mb-2">Retur Berhasil!</h4>
+                        <p class="text-gray-600 text-lg" x-text="returnSuccess"></p>
+                    </div>
+
+                    <!-- Return Details Form -->
+                    <div x-show="returnTransaction && !returnSuccess" x-transition>
+                        <div class="bg-gray-50 p-4 rounded-lg mb-6 flex justify-between items-center border border-gray-200">
+                            <div>
+                                <p class="text-sm text-gray-500">Invoice</p>
+                                <p class="font-bold text-gray-800 text-lg" x-text="returnTransaction?.invoice_number"></p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-sm text-gray-500">Pelanggan</p>
+                                <p class="font-medium text-gray-800" x-text="returnTransaction?.customer_name"></p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-sm text-gray-500">Waktu Transaksi</p>
+                                <p class="font-medium text-gray-800" x-text="returnTransaction?.transaction_date"></p>
+                            </div>
+                        </div>
+
+                        <div class="overflow-x-auto border border-gray-200 rounded-xl mb-6 shadow-sm">
+                            <table class="w-full text-left text-sm whitespace-nowrap">
+                                <thead class="bg-slate-50 text-slate-600 uppercase text-xs font-semibold">
+                                    <tr>
+                                        <th class="px-4 py-3">Produk</th>
+                                        <th class="px-4 py-3 text-right">Harga Nett</th>
+                                        <th class="px-4 py-3 text-center">Bisa Diretur</th>
+                                        <th class="px-4 py-3 text-center w-36">Qty Retur</th>
+                                        <th class="px-4 py-3 text-left w-56">Kondisi Barang</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200 bg-white">
+                                    <template x-for="(item, idx) in returnTransaction?.items" :key="item.id">
+                                        <tr class="hover:bg-orange-50/50 transition-colors">
+                                            <td class="px-4 py-3">
+                                                <div class="font-medium text-gray-900" x-text="item.product_name"></div>
+                                                <div class="text-xs text-gray-500">Terbeli awal: <span x-text="item.original_qty"></span>, Sudah diretur: <span x-text="item.returned_qty"></span></div>
+                                            </td>
+                                            <td class="px-4 py-3 text-right font-medium text-slate-700" x-text="formatCurrency(item.net_price)"></td>
+                                            <td class="px-4 py-3 text-center">
+                                                <span class="bg-blue-100 text-blue-800 text-xs font-bold px-2 py-1 rounded" x-text="item.max_qty"></span>
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                <div class="flex items-center">
+                                                    <button type="button" @click="if(item.return_qty > 0) item.return_qty--" class="px-2 py-1 bg-gray-100 border border-gray-300 rounded-l hover:bg-gray-200">-</button>
+                                                    <input type="number" x-model.number="item.return_qty" min="0" :max="item.max_qty"
+                                                        class="w-full px-2 py-1 border-y border-gray-300 text-center focus:ring-orange-500 focus:border-orange-500 appearance-none m-0">
+                                                    <button type="button" @click="if(item.return_qty < item.max_qty) item.return_qty++" class="px-2 py-1 bg-gray-100 border border-gray-300 rounded-r hover:bg-gray-200">+</button>
+                                                </div>
+                                            </td>
+                                            <td class="px-4 py-3 text-left">
+                                                <select x-model="item.condition" :disabled="item.return_qty == 0"
+                                                    class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:ring-orange-500 focus:border-orange-500 disabled:bg-gray-100">
+                                                    <option value="good">Kembali ke Stok (Good)</option>
+                                                    <option value="damaged">Barang Rusak (Damaged)</option>
+                                                </select>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Otorisasi Section -->
+                        <div class="bg-orange-50 p-5 rounded-xl border border-orange-200 shadow-inner">
+                            <h4 class="font-bold text-orange-800 mb-4 flex items-center">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                                Otorisasi Supervisor
+                            </h4>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-orange-900 mb-1">Catatan / Alasan Retur</label>
+                                    <input type="text" x-model="returnReason" placeholder="Misal: Salah ukuran, cacat pabrik"
+                                        class="w-full px-4 py-3 border border-orange-300 rounded-lg focus:ring-orange-500 focus:border-orange-500 bg-white">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-orange-900 mb-1">PIN Otorisasi Admin <span class="text-red-500">*</span></label>
+                                    <input type="password" x-model="adminPin" maxlength="6" placeholder="******" required
+                                        @keydown.enter="submitReturn()" autocomplete="off"
+                                        class="w-full text-center tracking-widest text-2xl font-mono px-4 py-2 border border-orange-300 rounded-lg focus:ring-orange-500 focus:border-orange-500 bg-white placeholder-gray-300">
+                                </div>
+                            </div>
+
+                            <div x-show="returnError" x-collapse>
+                                <div class="mt-4 p-3 bg-red-100 text-red-700 text-sm rounded border border-red-200">
+                                    <strong class="font-bold">Gagal!</strong> <span x-text="returnError"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Footer Actions -->
+                        <div class="mt-6 flex justify-end space-x-3">
+                            <button @click="returnTransaction = null" type="button"
+                                class="px-6 py-2.5 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 font-medium transition-colors">
+                                Kembali
+                            </button>
+                            <button @click="submitReturn()" type="button" :disabled="isProcessingReturn"
+                                class="px-6 py-2.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-bold disabled:opacity-50 flex items-center transition-colors shadow-sm">
+                                <svg x-show="isProcessingReturn" class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Proses Retur
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     @push('scripts')
@@ -764,6 +928,15 @@
                 return {
                     // Data
                     searchQuery: '',
+                    // Return Session
+                    showReturnModal: false,
+                    returnSearchInvoice: '',
+                    returnTransaction: null,
+                    returnError: '',
+                    returnSuccess: '',
+                    adminPin: '',
+                    returnReason: '',
+                    isProcessingReturn: false,
                     searchError: '',
                     autocompleteResults: [],
                     autocompleteIndex: -1,
@@ -801,6 +974,117 @@
                     closeRegisterError: '',
                     closingCashDisplay: '',
                     closingCashValue: '',
+
+                    openReturnModal() {
+                        this.showReturnModal = true;
+                        this.returnSearchInvoice = '';
+                        this.returnTransaction = null;
+                        this.returnError = '';
+                        this.returnSuccess = '';
+                        this.adminPin = '';
+                        this.returnReason = '';
+                        this.isProcessingReturn = false;
+                        this.$nextTick(() => {
+                            if (this.$refs.returnInvoiceInput) this.$refs.returnInvoiceInput.focus();
+                        });
+                    },
+                    closeReturnModal() {
+                        this.showReturnModal = false;
+                        this.returnTransaction = null;
+                        this.$nextTick(() => {
+                            if (this.$refs.searchInput) this.$refs.searchInput.focus();
+                        });
+                    },
+                    async searchReturnInvoice() {
+                        if (!this.returnSearchInvoice) return;
+                        this.isProcessingReturn = true;
+                        this.returnError = '';
+                        this.returnSuccess = '';
+                        
+                        try {
+                            const response = await fetch(`/pos/transactions/search-invoice?invoice_number=${encodeURIComponent(this.returnSearchInvoice)}`);
+                            const data = await response.json();
+                            
+                            if (data.success) {
+                                // Initialize return_qty to 0
+                                data.transaction.items = data.transaction.items.map(i => ({
+                                    ...i,
+                                    return_qty: 0,
+                                    condition: 'good'
+                                }));
+                                this.returnTransaction = data.transaction;
+                            } else {
+                                this.returnError = data.message || 'Invoice tidak ditemukan atau statusnya tidak valid untuk diretur.';
+                                this.returnTransaction = null;
+                            }
+                        } catch (error) {
+                            console.error('Search invoice error:', error);
+                            this.returnError = 'Terjadi kesalahan sistem saat mencari invoice. Pastikan format penulisan benar.';
+                            this.returnTransaction = null;
+                        } finally {
+                            this.isProcessingReturn = false;
+                        }
+                    },
+                    async submitReturn() {
+                        if (!this.returnTransaction) return;
+                        if (this.adminPin.length !== 6) {
+                            this.returnError = 'PIN Otorisasi Supervisor harus 6 digit.';
+                            return;
+                        }
+
+                        // Filter items where return_qty > 0
+                        const itemsToReturn = this.returnTransaction.items.filter(i => i.return_qty > 0);
+                        if (itemsToReturn.length === 0) {
+                            this.returnError = 'Silakan pilih minimal 1 qty untuk barang yang ingin diretur.';
+                            return;
+                        }
+
+                        this.isProcessingReturn = true;
+                        this.returnError = '';
+                        
+                        try {
+                            const payload = {
+                                admin_pin: this.adminPin,
+                                reason: this.returnReason || 'Retur inisiatif pelanggan dari Kasir POS',
+                                refund_method: 'cash',
+                                items: itemsToReturn.map(i => ({
+                                    id: i.id,
+                                    qty: i.return_qty,
+                                    condition: i.condition
+                                }))
+                            };
+
+                            const res = await fetch(`/pos/transactions/${this.returnTransaction.id}/returns-with-pin`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                                    'Accept': 'application/json'
+                                },
+                                body: JSON.stringify(payload)
+                            });
+                            
+                            const data = await res.json();
+                            
+                            if (data.success) {
+                                this.returnSuccess = data.message;
+                                this.returnTransaction = null; // Hide the form on success
+                                this.adminPin = '';
+                                
+                                setTimeout(() => {
+                                    this.closeReturnModal();
+                                    // optional: reload page or emit event
+                                }, 3500);
+                            } else {
+                                this.returnError = data.error || 'Gagal memproses retur pembatalan.';
+                            }
+                        } catch (e) {
+                            console.error('Return submit error:', e);
+                            this.returnError = 'Terjadi kesalahan sistem server internal saat request.';
+                        } finally {
+                            this.isProcessingReturn = false;
+                        }
+                    },
 
                     openCloseRegisterModal() {
                         this.showCloseRegisterModal = true;
@@ -1509,6 +1793,11 @@
                         if (event.key === 'F9') {
                             event.preventDefault();
                             window.location.href = '/pos/history';
+                        }
+                        // F10 - Return
+                        if (event.key === 'F10') {
+                            event.preventDefault();
+                            this.openReturnModal();
                         }
                         // ESC - Cancel/Close modals or clear cart
                         if (event.key === 'Escape') {

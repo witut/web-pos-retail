@@ -176,6 +176,10 @@ Route::middleware(['auth', 'role:cashier,admin'])->group(function () {
 
             // Verify Admin PIN
             Route::post('/verify-pin', [POSController::class, 'verifyPin'])->name('verify-pin');
+
+            // Returns API
+            Route::get('/transactions/search-invoice', [\App\Http\Controllers\Api\PosTransactionController::class, 'searchByInvoice'])->name('transactions.search-invoice');
+            Route::post('/transactions/{transaction}/returns-with-pin', [\App\Http\Controllers\Api\PosReturnController::class, 'storeWithPin'])->name('returns.store-with-pin');
         });
 
 
