@@ -252,18 +252,42 @@
 
             <!-- Payment Buttons - Sticky Footer -->
             <div class="flex-shrink-0 p-3 bg-gray-50 border-t border-gray-200 space-y-2">
+                <div class="flex space-x-2">
+                    <button type="button" @click="holdTransaction()" :disabled="cart.length === 0"
+                        class="flex-1 py-2 bg-amber-500 text-white text-sm font-bold rounded-xl hover:bg-amber-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span class="flex items-center justify-center">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Hold (F8)
+                        </span>
+                    </button>
+                    <button type="button" @click="showHoldModal = true"
+                        class="flex-1 py-2 bg-slate-600 text-white text-sm font-bold rounded-xl hover:bg-slate-700 transition-colors relative">
+                        <span class="flex items-center justify-center">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                            </svg>
+                            Daftar Hold
+                            <span x-show="heldTransactions.length > 0" x-text="heldTransactions.length"
+                                class="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                            </span>
+                        </span>
+                    </button>
+                </div>
+                
                 <button type="button" @click="openPaymentModal()" :disabled="cart.length === 0"
-                    class="w-full py-3 bg-emerald-600 text-white text-base font-bold rounded-xl hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    class="w-full py-3 bg-emerald-600 text-white text-base font-bold rounded-xl hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-2">
                     <span class="flex items-center justify-center">
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
                         </svg>
-                        BAYAR (F2)
+                        Checkout / Bayar (F2)
                     </span>
                 </button>
-
-                <div class="grid grid-cols-3 gap-2">
+                <!-- Action Buttons Grid -->
+                <div class="grid grid-cols-3 gap-2 mt-2">
                     <button type="button" @click.prevent="console.log('Batal clicked'); confirmClearCart()"
                         class="py-2 bg-red-100 text-red-700 font-medium rounded-lg hover:bg-red-200 transition-colors cursor-pointer text-sm">
                         Batal (ESC)
@@ -374,6 +398,47 @@
                 </div>
             </div>
         </div>
+        <!-- Toast Container -->
+        <div class="fixed bottom-4 right-4 z-[70] flex flex-col items-end space-y-2 pointer-events-none">
+            <template x-for="toast in toasts" :key="toast.id">
+                <div x-show="true"
+                     x-transition:enter="transition ease-out duration-300 transform"
+                     x-transition:enter-start="translate-y-4 opacity-0 scale-95"
+                     x-transition:enter-end="translate-y-0 opacity-100 scale-100"
+                     x-transition:leave="transition ease-in duration-200 transform"
+                     x-transition:leave-start="translate-y-0 opacity-100 scale-100"
+                     x-transition:leave-end="translate-y-4 opacity-0 scale-95"
+                     class="max-w-md w-full sm:min-w-[350px] bg-white shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden">
+                    <div class="p-4 flex items-center">
+                        <div class="flex-shrink-0">
+                            <!-- Success Icon -->
+                            <svg x-show="toast.type === 'success'" class="h-6 w-6 text-green-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <!-- Info Icon -->
+                            <svg x-show="toast.type === 'info'" class="h-6 w-6 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <!-- Error Icon -->
+                            <svg x-show="toast.type === 'error'" class="h-6 w-6 text-red-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <div class="ml-3 w-0 flex-1 pt-0.5">
+                            <p class="text-sm font-medium text-gray-900" x-text="toast.message"></p>
+                        </div>
+                        <div class="ml-4 flex-shrink-0 flex">
+                            <button @click="removeToast(toast.id)" class="bg-white rounded-md inline-flex text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                <span class="sr-only">Close</span>
+                                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
 
         <!-- Success Modal -->
         <div x-show="showSuccessModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -426,6 +491,83 @@
                 </div>
             </div>
         </div>
+        <!-- Hold Name Prompt Modal -->
+        <div x-show="showHoldPromptModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+            @keydown.escape.window="if(showHoldPromptModal) showHoldPromptModal = false"
+            @keydown.enter.window="if(showHoldPromptModal) confirmHoldTransaction()">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden"
+                @click.outside="showHoldPromptModal = false">
+                <div class="px-6 py-4 bg-amber-500 text-white flex justify-between items-center">
+                    <h3 class="font-bold">Simpan Transaksi (Hold)</h3>
+                    <button @click="showHoldPromptModal = false" class="text-amber-100 hover:text-white">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+                <div class="p-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Nama/Referensi Hold</label>
+                    <input type="text" x-model="holdNameInput" x-ref="holdNameInputField"
+                        placeholder="Cth: Bapak Baju Merah"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 mb-4">
+                    <div class="flex space-x-3 mt-2">
+                        <button @click="showHoldPromptModal = false" class="flex-1 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300">Batal</button>
+                        <button @click="confirmHoldTransaction()" class="flex-1 py-2 bg-amber-500 text-white rounded-lg font-bold hover:bg-amber-600">Simpan</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hold Transactions Modal -->
+        <div x-show="showHoldModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+            @keydown.escape.window="if(showHoldModal) showHoldModal = false">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden flex flex-col max-h-[80vh]"
+                @click.outside="showHoldModal = false">
+                <div class="px-6 py-4 bg-slate-800 text-white flex justify-between items-center flex-shrink-0">
+                    <h3 class="font-bold flex items-center text-lg">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+                        Daftar Transaksi Ditahan (Hold)
+                    </h3>
+                    <button @click="showHoldModal = false" class="text-slate-400 hover:text-white">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+                <div class="p-6 overflow-y-auto custom-scrollbar bg-slate-50 flex-1">
+                    <template x-if="heldTransactions.length === 0">
+                        <div class="text-center py-10 bg-white rounded-xl border border-dashed border-gray-300">
+                            <svg class="w-12 h-12 text-slate-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                            <p class="text-gray-500 font-medium">Tidak ada transaksi yang ditahan.</p>
+                        </div>
+                    </template>
+                    <template x-if="heldTransactions.length > 0">
+                        <div class="space-y-3">
+                            <template x-for="(held, index) in heldTransactions" :key="held.id">
+                                <div class="bg-white border rounded-xl p-4 flex justify-between items-center shadow-sm hover:shadow-md transition-shadow">
+                                    <div class="flex-1">
+                                        <h4 class="font-bold text-gray-800 text-lg" x-text="held.name"></h4>
+                                        <div class="flex items-center text-sm text-gray-500 mt-1 space-x-2">
+                                            <span class="flex items-center"><svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> <span x-text="new Date(held.created_at).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'})"></span></span>
+                                            <span>&bull;</span>
+                                            <span class="font-medium bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-xs" x-text="held.cart.length + ' item'"></span>
+                                            <span>&bull;</span>
+                                            <span class="font-bold text-emerald-600" x-text="formatCurrency(held.totals.final_total)"></span>
+                                        </div>
+                                        <p class="text-xs text-gray-500 mt-1.5 bg-gray-50 inline-block px-2 py-1 rounded" x-show="held.customer_name" x-text="'Pelanggan: ' + held.customer_name"></p>
+                                    </div>
+                                    <div class="flex space-x-2 ml-4 flex-shrink-0">
+                                        <button @click="resumeTransaction(index)" class="px-4 py-2 bg-emerald-500 text-white font-bold rounded-lg hover:bg-emerald-600 transition-colors shadow-sm flex items-center">
+                                            Lanjutkan
+                                        </button>
+                                        <button @click="deleteHeldTransaction(index)" class="px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors border border-red-100" title="Hapus">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+
         <!-- Close Register Modal -->
         <div x-show="showCloseRegisterModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
             @keydown.escape.prevent="closeCloseRegisterModal()">
@@ -808,6 +950,15 @@
                         this.$dispatch('customer-updated', { customer: null });
                     },
 
+                    restoreState(detail) {
+                        this.selectedCustomer = detail.customer;
+                        this.pointsToRedeem = detail.pointsToRedeem || 0;
+                        this.pointsDiscount = detail.pointsDiscount || 0;
+                        
+                        this.$dispatch('points-updated', { discount: this.pointsDiscount, redeem: this.pointsToRedeem });
+                        this.$dispatch('customer-updated', { customer: this.selectedCustomer });
+                    },
+
                     // Quick Add Customer
                     openQuickAddModal() {
                         this.showQuickAddModal = true;
@@ -927,6 +1078,7 @@
             function posTerminal() {
                 return {
                     // Data
+                    toasts: [],
                     searchQuery: '',
                     // Return Session
                     showReturnModal: false,
@@ -956,6 +1108,12 @@
                     lastInvoice: '',
                     lastTransactionId: null,
                     quickCashAmounts: [10000, 20000, 50000, 100000, 200000, 500000],
+
+                    // Hold Transactions
+                    showHoldModal: false,
+                    showHoldPromptModal: false,
+                    holdNameInput: '',
+                    heldTransactions: JSON.parse(localStorage.getItem('pos_held_transactions')) || [],
 
                     // Promotions
                     promotionDiscount: 0,
@@ -1177,11 +1335,22 @@
 
                     // localStorage methods
                     saveCartToStorage() {
+                        // Jangan simpan keranjang statis (kosong) ke localStorage. 
+                        // Mencegah masalah 'ghost data' dari watcher Alpine.js
+                        if (this.cart.length === 0) {
+                            try {
+                                localStorage.removeItem(this.storageKey);
+                            } catch (e) {}
+                            return;
+                        }
+
                         try {
                             const data = {
                                 cart: this.cart,
                                 couponCode: this.couponCode,
                                 customer: this.currentCustomer, // Saved from updateCustomer event
+                                pointsToRedeem: this.pointsToRedeem,
+                                pointsDiscount: this.pointsDiscount,
                                 savedAt: new Date().toISOString()
                             };
                             localStorage.setItem(this.storageKey, JSON.stringify(data));
@@ -1214,7 +1383,11 @@
                                         // Dispatch event to restore customer component UI
                                         // Use setTimeout to ensure component is initialized
                                         setTimeout(() => {
-                                            this.$dispatch('restore-customer-state', data.customer);
+                                            this.$dispatch('restore-full-state', {
+                                                customer: data.customer,
+                                                pointsToRedeem: data.pointsToRedeem || 0,
+                                                pointsDiscount: data.pointsDiscount || 0
+                                            });
                                         }, 100);
                                     }
                                 }
@@ -1238,7 +1411,7 @@
                             this.couponCode = '';
                             
                             // Dispatch event to clear customer component
-                            this.$dispatch('restore-customer-state', null);
+                            this.$dispatch('clear-customer');
                             
                         } catch (e) {
                             console.warn('Failed to clear cart from localStorage:', e);
@@ -1812,8 +1985,22 @@
                         this.amountPaid = 0;
                         this.paymentMethod = 'cash';
                         this.showSuccessModal = false;
-                        this.clearCartStorage(); // Clear localStorage after checkout
-                        this.$refs.searchInput.focus();
+                        
+                        // Form Resets
+                        this.searchQuery = '';
+                        this.couponCode = '';
+                        this.promotionDiscount = 0;
+                        this.appliedPromotions = [];
+                        
+                        // Complete Storage Clear and Broadcast
+                        this.clearCartStorage(); 
+                        window.dispatchEvent(new CustomEvent('clear-customer'));
+
+                        // Recalculate
+                        this.$nextTick(() => {
+                            this.calculateTotals();
+                            this.$refs.searchInput.focus();
+                        });
                     },
 
                     handleKeyboard(event) {
@@ -1826,6 +2013,11 @@
                         if (event.key === 'F2') {
                             event.preventDefault();
                             this.openPaymentModal();
+                        }
+                        // F8 - Hold Transaction
+                        if (event.key === 'F8') {
+                            event.preventDefault();
+                            this.holdTransaction();
                         }
                         // F9 - History
                         if (event.key === 'F9') {
@@ -1870,6 +2062,134 @@
                         if (!value) return '';
                         return new Intl.NumberFormat('id-ID').format(value);
                     },
+
+                    // Toast Notification Component Variables
+                    showToast(message, type = 'info') {
+                        const id = Date.now() + Math.random().toString(36).substr(2, 5);
+                        this.toasts.push({ id, message, type });
+                        setTimeout(() => {
+                            this.removeToast(id);
+                        }, 3000);
+                    },
+                    removeToast(id) {
+                        this.toasts = this.toasts.filter(toast => toast.id !== id);
+                    },
+
+                    // --- Hold Transactions Logic ---
+                    holdTransaction() {
+                        if (this.cart.length === 0) return;
+                        
+                        // Close other modals if any
+                        this.showPaymentModal = false;
+                        
+                        // Setup default name and show modal
+                        this.holdNameInput = this.customerName || `Hold ${new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`;
+                        this.showHoldPromptModal = true;
+                        
+                        this.$nextTick(() => {
+                            if(this.$refs.holdNameInputField) {
+                                this.$refs.holdNameInputField.select();
+                            }
+                        });
+                    },
+                    
+                    confirmHoldTransaction() {
+                        if (!this.showHoldPromptModal) return;
+                        
+                        const holdName = this.holdNameInput.trim() || `Hold ${new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`;
+
+                        const newHold = {
+                            id: Date.now(),
+                            name: holdName,
+                            cart: JSON.parse(JSON.stringify(this.cart)), // Deep copy cart
+                            customer_id: this.customerId,
+                            customer_name: this.customerName,
+                            full_customer_data: this.currentCustomer || null,
+                            coupon_code: this.couponCode,
+                            points_to_redeem: this.pointsToRedeem,
+                            points_discount: this.pointsDiscount,
+                            totals: {
+                                subtotal: this.subtotal,
+                                final_total: this.finalTotal
+                            },
+                            created_at: new Date().toISOString()
+                        };
+
+                        this.heldTransactions.push(newHold);
+                        localStorage.setItem('pos_held_transactions', JSON.stringify(this.heldTransactions));
+
+                        // Flash success and clear cart
+                        this.showHoldPromptModal = false;
+                        this.showToast('Transaksi berhasil ditahan', 'info');
+                        this.newTransaction();
+                        // bersihkan localstorage cart
+                    },
+
+                    resumeTransaction(index) {
+                        const holdData = this.heldTransactions[index];
+                        if (!holdData) return;
+
+                        const executeResume = () => {
+                            // Load data
+                            this.cart = holdData.cart;
+
+                            if (holdData.full_customer_data) {
+                                window.dispatchEvent(new CustomEvent('restore-full-state', { 
+                                    detail: {
+                                        customer: holdData.full_customer_data,
+                                        pointsToRedeem: holdData.points_to_redeem || 0,
+                                        pointsDiscount: holdData.points_discount || 0
+                                    }
+                                }));
+                            } else {
+                                window.dispatchEvent(new CustomEvent('clear-customer'));
+                            }
+
+                            this.couponCode = holdData.coupon_code || '';
+
+                            // Recalculate and update storage after Alpine state settles
+                            this.$nextTick(() => {
+                                this.calculateTotals();
+                                this.saveCartToStorage();
+                            });
+
+                            // Remove from Hold list without re-confirming
+                            this.heldTransactions.splice(index, 1);
+                            localStorage.setItem('pos_held_transactions', JSON.stringify(this.heldTransactions));
+                            this.showHoldModal = false;
+                            this.showToast('Transaksi berhasil dilanjutkan', 'success');
+                        };
+
+                        // Warn if current cart is not empty
+                        if (this.cart.length > 0) {
+                            this.showConfirm(
+                                'Timpa Keranjang?',
+                                'Keranjang saat ini tidak kosong. Ingin menimpa dengan transaksi yang ditahan? (Transaksi saat ini akan hilang)',
+                                executeResume
+                            );
+                        } else {
+                            executeResume();
+                        }
+                    },
+
+                    deleteHeldTransaction(index) {
+                        this.showConfirm(
+                            'Hapus Transaksi',
+                            'Yakin ingin menghapus transaksi tertunda ini selamanya?',
+                            () => {
+                                this.heldTransactions.splice(index, 1);
+                                localStorage.setItem('pos_held_transactions', JSON.stringify(this.heldTransactions));
+                                this.showToast('Transaksi tertunda berhasil dihapus', 'info');
+                            }
+                        );
+                    },
+
+                    formatDate(isoString) {
+                        return new Date(isoString).toLocaleString('id-ID', {
+                            day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+                        });
+                    },
+                    // ----------------------------
 
                     updateAmountPaid(value) {
                         // Remove non-numeric chars

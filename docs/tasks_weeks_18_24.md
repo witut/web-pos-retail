@@ -33,21 +33,31 @@
 ## Week 21: Return & Refund Management
 - [x] **Database Migration**: Create `returns`, `return_items` tables
 - [x] **Models**: Create `ProductReturn`, `ProductReturnItem`
-- [ ] **UI/UX**:
-    - [ ] Transaction History: Add "Return" button on eligible operations
-    - [ ] Return Request Form: Select items, quantity, condition, and reason
-- [ ] **Logic**:
-    - [ ] Stock adjustment service (increment stock if condition=good)
-    - [ ] Refund calculation (partial or full)
-    - [ ] Create negative `Transaction` record (optional) or link `Return` to `Transaction`
+- [x] **UI/UX**:
+    - [x] Transaction History: Add "Return" button on eligible operations
+    - [x] Return Request Form: Select items, quantity, condition, and reason
+- [x] **Logic**:
+    - [x] Stock adjustment service (increment stock if condition=good)
+    - [x] Refund calculation (partial or full)
+    - [x] Create negative `Transaction` record (optional) or link `Return` to `Transaction`
+
+## Hold Transaction Feature (New Request)
+- [ ] **Database**: Create `held_transactions` and `held_transaction_items` (or similar strategy).
+- [ ] **Backend API**:
+    - [ ] Endpoint to save current cart as "Held".
+    - [ ] Endpoint to fetch list of "Held" transactions for the active session.
+    - [ ] Endpoint to resume (load) a held transaction and delete it from hold.
+- [ ] **Frontend (POS)**:
+    - [ ] Add "Hold Transaksi" button.
+    - [ ] Add "Daftar Hold" modal to view and resume held transactions.
 
 ## Week 23: Direct Printing System
-- [ ] **Research**: Confirm printer model and browser capabilities
-- [ ] **Frontend**:
-    - [ ] Create optimized Receipt View (CSS for 58mm/80mm)
-    - [ ] JavaScript print trigger (`window.print()`)
-    - [ ] (Optional) Integrate QZ Tray or similar for silent printing
-- [ ] **Settings**: Add "Printer Configuration" in Settings (Header/Footer text, Logo)
+- [x] **Research**: Confirm printer model and browser capabilities
+- [x] **Frontend**:
+    - [x] Create optimized Receipt View (CSS for 58mm/80mm)
+    - [x] JavaScript print trigger (`window.print()`)
+    - [x] (Optional) Integrate QZ Tray or similar for silent printing
+- [x] **Settings**: Add "Printer Configuration" in Settings (Header/Footer text, Logo)
 
 ## Week 24: Testing, Documentation & Polish
 - [ ] **Testing**:

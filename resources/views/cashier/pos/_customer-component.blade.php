@@ -1,6 +1,7 @@
 {{-- Customer Selection Component --}}
 <div class="bg-white rounded-xl shadow-sm p-4" x-data="customerComponent()"
-    @restore-customer-state.window="selectCustomer($event.detail)">
+    @restore-customer-state.window="selectCustomer($event.detail)" @clear-customer.window="clearCustomer()"
+    @restore-full-state.window="restoreState($event.detail)">
     <div class="flex items-center justify-between mb-3">
         <h3 class="text-sm font-semibold text-gray-700">Pelanggan</h3>
         <span x-show="!selectedCustomer" class="text-xs text-gray-400">(Opsional)</span>
