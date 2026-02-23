@@ -313,9 +313,14 @@ class Transaction extends Model
      */
     public function getTotalProfit(): float
     {
-        return $this->items->sum(function ($item) {
-            return ($item->unit_price - $item->cost_price) * $item->qty;
+        $totalCogs = $this->items->sum(function ($item) {
+            return $item->cost_price * $item->qty;
         });
+
+        // Revenue termasuk pajak sesuai permintaan
+        $netRevenue = $this->total;
+
+        return $netRevenue - $totalCogs;
     }
 
     /**

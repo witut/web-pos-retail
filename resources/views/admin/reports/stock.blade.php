@@ -25,15 +25,16 @@
 
     <!-- Filter Section -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6 no-print">
-        <div class="flex gap-2">
+        <div class="flex flex-col md:flex-row gap-3">
             <form action="{{ route('admin.reports.stock') }}" method="GET"
-                class="flex gap-2 items-center bg-white dark:bg-slate-800 p-2 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700">
+                class="flex flex-wrap gap-2 items-center flex-1">
                 <select name="category_id"
-                    class="px-3 py-1.5 border border-slate-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                    class="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500">
                     <option value="">Semua Kategori</option>
                     @foreach($categories as $category)
                         <option value="{{ $category->id }}" {{ $selectedCategory == $category->id ? 'selected' : '' }}>
-                            {{ $category->name }}</option>
+                            {{ $category->name }}
+                        </option>
                     @endforeach
                 </select>
 
@@ -43,9 +44,9 @@
                 </button>
             </form>
 
-            <div x-data="{ open: false }" class="relative">
+            <div x-data="{ open: false }" class="relative shrink-0">
                 <button @click="open = !open"
-                    class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors">
+                    class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-1.5 rounded-md text-sm font-medium flex items-center gap-2 transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
@@ -53,14 +54,12 @@
                     Export
                 </button>
                 <div x-show="open" @click.away="open = false"
-                    class="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-md shadow-lg py-1 z-50 border border-slate-200 dark:border-slate-700"
+                    class="absolute text-left right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200"
                     x-cloak>
                     <a href="{{ route('admin.reports.export', array_merge(request()->all(), ['type' => 'stock', 'format' => 'excel'])) }}"
-                        class="block px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">Export
-                        Excel</a>
+                        class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Export Excel</a>
                     <a href="{{ route('admin.reports.export', array_merge(request()->all(), ['type' => 'stock', 'format' => 'pdf'])) }}"
-                        class="block px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">Export
-                        PDF</a>
+                        class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Export PDF</a>
                 </div>
             </div>
         </div>

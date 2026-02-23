@@ -93,13 +93,13 @@ class TransactionItem extends Model
 
     /**
      * Hitung profit untuk item ini
-     * Profit = (Selling Price - Cost Price) × Qty
+     * Profit = Subtotal (Revenue Bersih setelah diskon item) - Total HPP (Cost Price * Qty)
      * 
      * @return float
      */
     public function getProfit(): float
     {
-        return ($this->unit_price - $this->cost_price) * $this->qty;
+        return $this->subtotal - ($this->cost_price * $this->qty);
     }
 
     /**
@@ -109,9 +109,11 @@ class TransactionItem extends Model
      */
     public function getProfitMargin(): float
     {
-        if ($this->cost_price == 0)
+        $totalCost = $this->cost_price * $this->qty;
+        if ($totalCost == 0)
             return 0;
-        return (($this->unit_price - $this->cost_price) / $this->cost_price) * 100;
+
+        return (($this->subtotal - $totalCost) / $totalCost) * 100;
     }
 
     /**

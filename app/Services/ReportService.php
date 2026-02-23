@@ -151,7 +151,7 @@ class ReportService
                 DB::raw('SUM(transaction_items.qty) as total_qty'),
                 DB::raw('SUM(transaction_items.subtotal) as total_sales'),
                 DB::raw('COUNT(DISTINCT transactions.id) as transaction_count'),
-                DB::raw('SUM(transaction_items.qty * (transaction_items.unit_price - transaction_items.cost_price)) as total_profit')
+                DB::raw('SUM(transaction_items.subtotal - (transaction_items.qty * transaction_items.cost_price)) as total_profit')
             )
             ->groupBy('products.id', 'products.name', 'products.sku')
             ->orderByDesc('total_sales')
@@ -411,7 +411,7 @@ class ReportService
                 $trxItems += $item->qty;
             }
 
-            $trxProfit = $trxRevenue - $trxCOGS;
+            $trxProfit = $trx->getTotalProfit();
 
             $summary['gross_revenue'] += $trxRevenue;
             $summary['cogs'] += $trxCOGS;
