@@ -75,12 +75,23 @@ class POSController extends Controller
 
         // Get customer settings
         $cashierCanCreate = $this->settingService->getBool('customer.cashier_can_create', true);
+        $pointsMinRedeem = $this->settingService->getInt('customer.points_min_redeem', 100);
+        $pointsMaxRedeemPercent = $this->settingService->getInt('customer.points_max_redeem_percent', 90);
 
         // Check for active session
         $shiftService = app(\App\Services\ShiftService::class);
         $session = $shiftService->getCurrentSession(auth()->user());
 
-        return view('cashier.pos.index', compact('taxRate', 'taxType', 'printerSettings', 'todayTransactions', 'cashierCanCreate', 'session'));
+        return view('cashier.pos.index', compact(
+            'taxRate',
+            'taxType',
+            'printerSettings',
+            'todayTransactions',
+            'cashierCanCreate',
+            'pointsMinRedeem',
+            'pointsMaxRedeemPercent',
+            'session'
+        ));
     }
 
     /**

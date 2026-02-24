@@ -73,6 +73,9 @@ class SettingController extends Controller
             'customer.points_expiry_days',
             'customer.points_min_transaction',
             'customer.points_with_discount',
+            'customer.points_min_redeem',
+            'customer.points_max_redeem_percent',
+            'customer.points_rounding',
 
             // Discount
             'discount.cashier_manual_allowed',

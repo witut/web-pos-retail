@@ -73,6 +73,32 @@
         </div>
 
         <div class="mt-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Minimal Poin untuk Ditukar</label>
+            <input type="number" name="customer.points_min_redeem" min="0" step="1"
+                value="{{ old('customer.points_min_redeem', $settings['customer.points_min_redeem'] ?? '100') }}"
+                class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 sm:text-sm sm:w-1/3">
+            <p class="text-xs text-gray-500 mt-1">Pelanggan harus memiliki poin minimal sejumlah ini sebelum bisa ditukar.</p>
+        </div>
+
+        <div class="mt-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Maksimal Penukaran per Transaksi (%)</label>
+            <input type="number" name="customer.points_max_redeem_percent" min="1" max="100" step="1"
+                value="{{ old('customer.points_max_redeem_percent', $settings['customer.points_max_redeem_percent'] ?? '90') }}"
+                class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 sm:text-sm sm:w-1/3">
+            <p class="text-xs text-gray-500 mt-1">Batas maksimal nilai poin yang memotong total belanja (1-100%). Contoh: 90 = Pelanggan tetap harus bayar minimal 10% dengan cash/kartu.</p>
+        </div>
+
+        <div class="mt-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Metode Pembulatan Poin</label>
+            <select name="customer.points_rounding" class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 sm:text-sm sm:w-1/3">
+                <option value="down" {{ old('customer.points_rounding', $settings['customer.points_rounding'] ?? 'down') == 'down' ? 'selected' : '' }}>Ke Bawah (Floor)</option>
+                <option value="up" {{ old('customer.points_rounding', $settings['customer.points_rounding'] ?? 'down') == 'up' ? 'selected' : '' }}>Ke Atas (Ceiling)</option>
+                <option value="round" {{ old('customer.points_rounding', $settings['customer.points_rounding'] ?? 'down') == 'round' ? 'selected' : '' }}>Terdekat (Round)</option>
+            </select>
+            <p class="text-xs text-gray-500 mt-1">Contoh: Beli Rp15.000 dengan rate 10.000:1. <br>Ke Bawah = 1 Poin. Terdekat = 2 Poin. Ke Atas = 2 Poin.</p>
+        </div>
+
+        <div class="mt-4">
             <label class="flex items-center">
                 <input type="checkbox" name="customer.points_with_discount" value="1"
                     {{ old('customer.points_with_discount', $settings['customer.points_with_discount'] ?? '1') == '1' ? 'checked' : '' }}

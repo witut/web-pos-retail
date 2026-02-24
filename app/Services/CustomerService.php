@@ -41,8 +41,17 @@ class CustomerService
             return 0;
         }
 
-        // Calculate points (floor to avoid decimal points)
-        return (int) floor($amount / $amountPerPoint) * $pointsPerAmount;
+        // Calculate points based on rounding logic
+        $rawPoints = $amount / $amountPerPoint;
+        $roundingMethod = $this->settingService->get('customer.points_rounding', 'down');
+
+        $calculatedPoints = match ($roundingMethod) {
+            'up' => ceil($rawPoints),
+            'round' => round($rawPoints),
+            default => floor($rawPoints),
+        };
+
+        return (int) $calculatedPoints * $pointsPerAmount;
     }
 
     /**
@@ -119,6 +128,12 @@ class CustomerService
         // Check if customer has enough points
         if ($customer->points_balance < $points) {
             throw new \Exception('Insufficient points balance');
+        }
+
+        // Check minimum point redemption limit
+        $minRedeem = $this->settingService->getInt('customer.points_min_redeem', 100);
+        if ($customer->points_balance < $minRedeem) {
+            throw new \Exception("Minimum $minRedeem points required for redemption");
         }
 
         // Calculate discount amount

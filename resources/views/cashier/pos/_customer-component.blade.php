@@ -1,7 +1,7 @@
-{{-- Customer Selection Component --}}
 <div class="bg-white rounded-xl shadow-sm p-4" x-data="customerComponent()"
     @restore-customer-state.window="selectCustomer($event.detail)" @clear-customer.window="clearCustomer()"
-    @restore-full-state.window="restoreState($event.detail)">
+    @restore-full-state.window="restoreState($event.detail)"
+    @open-redeem-with-cart.window="initRedeemModal($event.detail)">
     <div class="flex items-center justify-between mb-3">
         <h3 class="text-sm font-semibold text-gray-700">Pelanggan</h3>
         <span x-show="!selectedCustomer" class="text-xs text-gray-400">(Opsional)</span>
@@ -28,7 +28,8 @@
                         </svg>
                         <span x-text="formatNumber(selectedCustomer?.points_balance || 0)"></span> poin
                     </span>
-                    <button @click="openRedeemModal()" x-show="selectedCustomer?.points_balance > 0"
+                    <button @click="$dispatch('request-cart-total-for-redeem')"
+                        x-show="selectedCustomer?.points_balance > 0"
                         class="text-xs text-blue-600 hover:text-blue-800 font-medium">
                         Tukar Poin
                     </button>

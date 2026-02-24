@@ -4,7 +4,8 @@
         @keydown.window="handleKeyboard($event)" 
         @points-updated.window="updatePoints($event.detail)" 
         @customer-updated.window="updateCustomer($event.detail)"
-        @open-close-register.window="openCloseRegisterModal()">
+        @open-close-register.window="openCloseRegisterModal()"
+        @request-cart-total-for-redeem.window="$dispatch('open-redeem-with-cart', subtotal)">
         <!-- Left Panel: Product Search & Cart -->
         <div class="flex-1 flex flex-col p-4 space-y-4">
             <!-- Search Bar -->
@@ -863,6 +864,10 @@
 
             function customerComponent() {
                 return {
+                    // Settings
+                    pointsMinRedeem: {{ $pointsMinRedeem ?? 100 }},
+                    pointsMaxRedeemPercent: {{ $pointsMaxRedeemPercent ?? 90 }},
+
                     // Customer Data
                     selectedCustomer: null,
                     customerSearch: '',
@@ -875,6 +880,7 @@
                     pointsDiscount: 0,
                     tempPointsDiscount: 0,
                     redeemAmount: 0,
+                    maxRedeemAllowed: 0,
 
                     // Quick Add
                     showQuickAddModal: false,
@@ -1041,6 +1047,18 @@
                         this.tempPointsDiscount = this.redeemAmount * 100;
                     },
 
+                    // Called before opening modal, passing subtotal from posTerminal
+                    initRedeemModal(cartTotal) {
+                        this.showRedeemModal = true;
+                        this.redeemAmount = 0;
+                        this.tempPointsDiscount = 0;
+                        this.redeemError = '';
+                        // Calculate max allowed discount based on percentage
+                        let maxDiscountValue = cartTotal * (this.pointsMaxRedeemPercent / 100);
+                        // Convert max discount to points (Rp 100 = 1 point)
+                        this.maxRedeemAllowed = Math.floor(maxDiscountValue / 100);
+                    },
+
                     confirmRedeemPoints() {
                         if (!this.redeemAmount || this.redeemAmount <= 0) {
                             this.redeemError = 'Masukkan jumlah poin';
@@ -1049,6 +1067,16 @@
 
                         if (this.redeemAmount > (this.selectedCustomer?.points_balance || 0)) {
                             this.redeemError = 'Poin tidak mencukupi';
+                            return;
+                        }
+
+                        if ((this.selectedCustomer?.points_balance || 0) < this.pointsMinRedeem) {
+                            this.redeemError = `Minimal poin yang bisa ditukar adalah ${this.pointsMinRedeem} Poin`;
+                            return;
+                        }
+
+                        if (this.redeemAmount > this.maxRedeemAllowed) {
+                            this.redeemError = `Titik pemotongan maksimal adalah ${this.maxRedeemAllowed} poin (${this.pointsMaxRedeemPercent}% dari tagihan)`;
                             return;
                         }
 
@@ -1428,6 +1456,9 @@
                             return sum + subtotal;
                         }, 0);
                     },
+                    get taxableBase() {
+                        return Math.max(0, this.totalCartValue - this.promotionDiscount);
+                    },
                     get netDiscountedValue() {
                         return Math.max(0, this.totalCartValue - this.promotionDiscount - this.pointsDiscount);
                     },
@@ -1436,18 +1467,17 @@
                         if (this.taxType === 'inclusive') {
                             // Jika pajak inklusif, harga subtotal utuh sebelum didiskon dan seolah-olah sudah termasuk pajak 
                             // Untuk UI POS ini, 'subtotal' adalah total cart tanpa tax jika diekstrak, 
-                            // Tapi untuk kesederhanaan display:
                             return Math.round(this.totalCartValue - (this.totalCartValue - (this.totalCartValue / (1 + this.taxRate / 100))));
                         }
                         return Math.round(this.totalCartValue);
                     },
                     get taxAmount() {
                         if (this.taxType === 'inclusive') {
-                            // Tax included in price, calculated from NET value after discount
-                            return Math.round(this.netDiscountedValue - (this.netDiscountedValue / (1 + this.taxRate / 100)));
+                            // Tax included in price, calculated from taxableBase (NOT reduced by points)
+                            return Math.round(this.taxableBase - (this.taxableBase / (1 + this.taxRate / 100)));
                         }
-                        // Tax added on top of NET value
-                        return Math.round(this.netDiscountedValue * (this.taxRate / 100));
+                        // Tax added on top of taxableBase (Points are tender, not pre-tax discount)
+                        return Math.round(this.taxableBase * (this.taxRate / 100));
                     },
                     get grandTotal() {
                         if (this.taxType === 'inclusive') {
@@ -1459,7 +1489,7 @@
                         if (this.taxType === 'inclusive') {
                             return Math.round(this.netDiscountedValue);
                         }
-                        return Math.round(this.netDiscountedValue + this.taxAmount);
+                        return Math.round(this.taxableBase + this.taxAmount - this.pointsDiscount);
                     },
                     get change() {
                         return Math.round(parseInt(this.amountPaid || 0) - this.finalTotal);

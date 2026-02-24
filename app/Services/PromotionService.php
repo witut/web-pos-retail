@@ -67,6 +67,20 @@ class PromotionService
                     $itemDiscount = $baseForDiscount * ($promotion->value / 100);
                 } elseif ($promotion->type === 'fixed_amount') {
                     $itemDiscount = min($promotion->value, $item->price) * $item->qty;
+                } elseif ($promotion->type === 'buy_x_get_y') {
+                    $buyQty = $promotion->buy_qty ?: 1;
+                    $getQty = $promotion->get_qty ?: 1;
+
+                    // Logic: You pay for `buyQty`, and the next `getQty` items are free.
+                    // E.g. Buy 2 Get 1. qty=2 -> free=0. qty=3 -> free=1. qty=4 -> free=1. qty=6 -> free=2.
+                    $discountQty = 0;
+                    $remainingQty = $item->qty;
+                    while ($remainingQty > $buyQty) {
+                        $freeQty = min($remainingQty - $buyQty, $getQty);
+                        $discountQty += $freeQty;
+                        $remainingQty -= ($buyQty + $getQty);
+                    }
+                    $itemDiscount = $discountQty * $item->price;
                 }
 
                 if ($itemDiscount > 0) {

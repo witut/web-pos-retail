@@ -9,7 +9,7 @@ Skenario ini memastikan perhitungan otomatis dan manual tidak saling tindih atau
 - [x] **Skenario A (Promo Persentase + Kupon)**
   - **Langkah:** Masukkan barang yang sedang diskon otomatis (misalnya 10%). Setelah itu, terapkan *Kupon Global* pada keranjang tersebut.
   - **Ekspektasi:** Total tagihan berkurang dua kali (dari promo barang, lalu dari kupon). Harga tagihan bersih (Net Total) tidak boleh menjadi angka minus (di bawah Rp 0). Pajak dihitung dengan benar dari subtotal bersih.
-- [ ] **Skenario B (Tukar Poin + Promo)**
+- [x] **Skenario B (Tukar Poin + Promo)**
   - **Langkah:** Masukkan produk yang sedang promo ke keranjang. Pilih pelanggan terdaftar. Lakukan *Redeem/Tukar* semua poin pelanggan tersebut hingga nilainya menutupi (atau nyaris menutupi) seluruh tagihan.
   - **Ekspektasi:** Sistem tidak boleh *crash*. Kolom "Change/Kembalian" harus menunjukkan angka yang wajar (tidak minus secara tidak logis). Total pembayaran sesuai dengan sisa tagihan dikurangi poin.
 - [ ] **Skenario C (Buy X Get Y)**
