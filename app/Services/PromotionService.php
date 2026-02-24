@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\Promotion;
 use App\Models\Transaction;
 use App\Models\TransactionItem;
+use App\Models\Setting;
 use Carbon\Carbon;
 
 class PromotionService
@@ -32,8 +33,16 @@ class PromotionService
         $discountAmount = 0;
         $appliedPromotions = [];
 
+        $allowStacking = Setting::get('discount.allow_stacking', '1') == '1';
+
         // 1. Check for Automatic Promotions (Active, Date valid)
-        $promotions = Promotion::active()->get();
+        $promotions = Promotion::with('products')->active()->get();
+
+        foreach ($itemsCollection as $item) {
+            $item->best_discount = 0;
+            $item->best_promo = null;
+            $item->stack_discounts = []; // For allowStacking = true
+        }
 
         foreach ($promotions as $promotion) {
             // Skip if minimum purchase not met
@@ -42,53 +51,76 @@ class PromotionService
             }
 
             // Check if promotion applies to specific products
-            $applicableItems = $itemsCollection;
-            if ($promotion->products()->count() > 0) {
-                $productIds = $promotion->products->pluck('id')->toArray();
-                $applicableItems = $itemsCollection->whereIn('product_id', $productIds);
+            $productIds = $promotion->products->pluck('id')->toArray();
+            if (empty($productIds))
+                continue;
 
-                if ($applicableItems->isEmpty()) {
-                    continue;
+            $applicableItems = $itemsCollection->whereIn('product_id', $productIds);
+            if ($applicableItems->isEmpty())
+                continue;
+
+            foreach ($applicableItems as $item) {
+                $itemDiscount = 0;
+                if ($promotion->type === 'percentage') {
+                    // Capped by item subtotal minus existing discount if stacking
+                    $baseForDiscount = $allowStacking ? ($item->subtotal - array_sum(array_column($item->stack_discounts, 'amount'))) : $item->subtotal;
+                    $itemDiscount = $baseForDiscount * ($promotion->value / 100);
+                } elseif ($promotion->type === 'fixed_amount') {
+                    $itemDiscount = min($promotion->value, $item->price) * $item->qty;
                 }
-            }
 
-            // Calculate Discount based on Type
-            $promoDiscount = 0;
-
-            if ($promotion->type === 'percentage') {
-                // Percentage of applicable items subtotal
-                // Percentage of applicable items subtotal
-                foreach ($applicableItems as $item) {
-                    $itemDiscount = $item->subtotal * ($promotion->value / 100);
-                    $item->discount_amount += $itemDiscount;
-                    $promoDiscount += $itemDiscount;
+                if ($itemDiscount > 0) {
+                    if ($allowStacking) {
+                        $item->stack_discounts[] = [
+                            'promo' => $promotion,
+                            'amount' => $itemDiscount
+                        ];
+                    } else {
+                        // Keep the best discount for this item
+                        if ($itemDiscount > $item->best_discount) {
+                            $item->best_discount = $itemDiscount;
+                            $item->best_promo = $promotion;
+                        }
+                    }
                 }
-            } elseif ($promotion->type === 'fixed_amount') {
-                // Fixed amount PER ITEM QTY for applicable items
-                foreach ($applicableItems as $item) {
-                    // Maximum discount per item is its price (cannot be negative price)
-                    $discountPerUnit = min($promotion->value, $item->price);
-                    $itemDiscount = $discountPerUnit * $item->qty;
-
-                    $item->discount_amount += $itemDiscount;
-                    $promoDiscount += $itemDiscount;
-                }
-            } elseif ($promotion->type === 'buy_x_get_y') {
-                // Simplified Buy X Get Y logic: Discount = Price of Y
-                // Needs more complex structure to define "Buy what, Get what"
-                // For now, assuming "Buy X qty of THIS product, get discount" 
-                // This is a placeholder for complex logic
-            }
-
-            if ($promoDiscount > 0) {
-                $discountAmount += $promoDiscount;
-                $appliedPromotions[] = [
-                    'id' => $promotion->id,
-                    'name' => $promotion->name,
-                    'amount' => $promoDiscount
-                ];
             }
         }
+
+        $appliedPromotionsMap = [];
+
+        foreach ($itemsCollection as $item) {
+            if ($allowStacking) {
+                foreach ($item->stack_discounts as $sd) {
+                    $item->discount_amount += $sd['amount'];
+                    $promoId = $sd['promo']->id;
+                    if (!isset($appliedPromotionsMap[$promoId])) {
+                        $appliedPromotionsMap[$promoId] = [
+                            'id' => $sd['promo']->id,
+                            'name' => $sd['promo']->name,
+                            'amount' => 0
+                        ];
+                    }
+                    $appliedPromotionsMap[$promoId]['amount'] += $sd['amount'];
+                    $discountAmount += $sd['amount'];
+                }
+            } else {
+                if ($item->best_discount > 0) {
+                    $item->discount_amount = $item->best_discount;
+                    $promoId = $item->best_promo->id;
+                    if (!isset($appliedPromotionsMap[$promoId])) {
+                        $appliedPromotionsMap[$promoId] = [
+                            'id' => $item->best_promo->id,
+                            'name' => $item->best_promo->name,
+                            'amount' => 0
+                        ];
+                    }
+                    $appliedPromotionsMap[$promoId]['amount'] += $item->best_discount;
+                    $discountAmount += $item->best_discount;
+                }
+            }
+        }
+
+        $appliedPromotions = array_values($appliedPromotionsMap);
 
         // 2. Check Coupon
         if ($couponCode) {
@@ -97,18 +129,56 @@ class PromotionService
             if ($coupon && $coupon->isValid()) {
                 $couponDiscount = 0;
 
-                if ($coupon->type === 'percentage') {
-                    $couponDiscount = $subtotal * ($coupon->value / 100);
-                } else {
-                    $couponDiscount = $coupon->value;
-                }
+                if (!$allowStacking) {
+                    // Non-Stackable logic:
+                    // Bucket B: Calculate eligible subtotal from items without any product promo
+                    $eligibleSubtotal = collect($itemsCollection)->where('discount_amount', 0)->sum('subtotal');
 
-                $discountAmount += $couponDiscount;
-                $appliedPromotions[] = [
-                    'code' => $coupon->code,
-                    'name' => 'Coupon: ' . $coupon->code,
-                    'amount' => $couponDiscount
-                ];
+                    if ($eligibleSubtotal > 0) {
+                        if ($coupon->type === 'percentage') {
+                            $couponDiscount = $eligibleSubtotal * ($coupon->value / 100);
+                        } else {
+                            $couponDiscount = min($coupon->value, $eligibleSubtotal);
+                        }
+
+                        $discountAmount += $couponDiscount;
+                        $appliedPromotions[] = [
+                            'code' => $coupon->code,
+                            'name' => 'Coupon: ' . $coupon->code . ' (Non-Promo Items)',
+                            'amount' => $couponDiscount
+                        ];
+                    } else {
+                        $appliedPromotions[] = [
+                            'code' => $coupon->code,
+                            'name' => 'Coupon: ' . $coupon->code . ' (Gagal: Semua barang promosi)',
+                            'amount' => 0
+                        ];
+                    }
+                } else {
+                    // Stackable logic:
+                    // Coupon applies to the Net Subtotal of ALL items
+                    $baseForCoupon = $subtotal - $discountAmount;
+                    if ($baseForCoupon > 0) {
+                        if ($coupon->type === 'percentage') {
+                            $couponDiscount = $baseForCoupon * ($coupon->value / 100);
+                        } else {
+                            $couponDiscount = min($coupon->value, $baseForCoupon);
+                        }
+
+                        $discountAmount += $couponDiscount;
+                        $appliedPromotions[] = [
+                            'code' => $coupon->code,
+                            'name' => 'Coupon: ' . $coupon->code,
+                            'amount' => $couponDiscount
+                        ];
+                    } else {
+                        $appliedPromotions[] = [
+                            'code' => $coupon->code,
+                            'name' => 'Coupon: ' . $coupon->code . ' (Gagal: Nilai keranjang 0)',
+                            'amount' => 0
+                        ];
+                    }
+                }
             }
         }
 

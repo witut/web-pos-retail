@@ -1428,31 +1428,41 @@
                             return sum + subtotal;
                         }, 0);
                     },
+                    get netDiscountedValue() {
+                        return Math.max(0, this.totalCartValue - this.promotionDiscount - this.pointsDiscount);
+                    },
                     get subtotal() {
+                        // Untuk display di UI (Sebelum pajak khusus untuk tipe eksklusif)
                         if (this.taxType === 'inclusive') {
-                            return Math.round(this.totalCartValue - this.taxAmount);
+                            // Jika pajak inklusif, harga subtotal utuh sebelum didiskon dan seolah-olah sudah termasuk pajak 
+                            // Untuk UI POS ini, 'subtotal' adalah total cart tanpa tax jika diekstrak, 
+                            // Tapi untuk kesederhanaan display:
+                            return Math.round(this.totalCartValue - (this.totalCartValue - (this.totalCartValue / (1 + this.taxRate / 100))));
                         }
                         return Math.round(this.totalCartValue);
                     },
                     get taxAmount() {
                         if (this.taxType === 'inclusive') {
-                            // Tax included in price
-                            return Math.round(this.totalCartValue - (this.totalCartValue / (1 + this.taxRate / 100)));
+                            // Tax included in price, calculated from NET value after discount
+                            return Math.round(this.netDiscountedValue - (this.netDiscountedValue / (1 + this.taxRate / 100)));
                         }
-                        // Tax added on top
-                        return Math.round(this.subtotal * (this.taxRate / 100));
+                        // Tax added on top of NET value
+                        return Math.round(this.netDiscountedValue * (this.taxRate / 100));
                     },
                     get grandTotal() {
                         if (this.taxType === 'inclusive') {
                             return Math.round(this.totalCartValue);
                         }
-                        return Math.round(this.subtotal + this.taxAmount);
+                        return Math.round(this.subtotal + Math.round(this.totalCartValue * (this.taxRate / 100)));
+                    },
+                    get finalTotal() {
+                        if (this.taxType === 'inclusive') {
+                            return Math.round(this.netDiscountedValue);
+                        }
+                        return Math.round(this.netDiscountedValue + this.taxAmount);
                     },
                     get change() {
                         return Math.round(parseInt(this.amountPaid || 0) - this.finalTotal);
-                    },
-                    get finalTotal() {
-                        return Math.max(0, Math.round(this.grandTotal - this.pointsDiscount - this.promotionDiscount));
                     },
 
                     // Methods
