@@ -5,7 +5,7 @@
         @points-updated.window="updatePoints($event.detail)" 
         @customer-updated.window="updateCustomer($event.detail)"
         @open-close-register.window="openCloseRegisterModal()"
-        @request-cart-total-for-redeem.window="$dispatch('open-redeem-with-cart', subtotal)">
+        @request-cart-total-for-redeem.window="$dispatch('open-redeem-with-cart', taxType === 'inclusive' ? Math.max(0, totalCartValue - promotionDiscount) : Math.round(taxableBase + taxAmount))">
         <!-- Left Panel: Product Search & Cart -->
         <div class="flex-1 flex flex-col p-4 space-y-4">
             <!-- Search Bar -->
@@ -89,6 +89,14 @@
                                     <td class="px-4 py-3">
                                         <div class="font-medium text-gray-800" x-text="item.name"></div>
                                         <div class="text-xs text-gray-500" x-text="item.sku"></div>
+
+                                        <!-- Promo Badge -->
+                                        <div x-show="item.promo_name" class="mt-1" x-transition>
+                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-pink-100 text-pink-700 border border-pink-200 uppercase tracking-wider">
+                                                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path></svg>
+                                                <span x-text="item.promo_name"></span>
+                                            </span>
+                                        </div>
 
                                         <!-- Unit Selector -->
                                         <div x-show="item.available_units && item.available_units.length > 1"
@@ -196,10 +204,11 @@
                         <span>Diskon Promosi</span>
                         <span class="font-medium">-<span x-text="formatCurrency(promotionDiscount)"></span></span>
                     </div>
-                    <template x-for="promo in appliedPromotions" :key="promo.id">
-                        <div class="flex justify-between text-xs text-blue-500 italic px-2">
+                    <template x-for="promo in appliedPromotions" :key="promo.name">
+                        <div class="flex justify-between text-xs italic px-2"
+                             :class="promo.name.includes('Gagal:') ? 'text-red-500' : 'text-blue-500'">
                             <span x-text="promo.name"></span>
-                            <span>Applied</span>
+                            <span x-text="promo.name.includes('Gagal:') ? 'Ignored' : 'Applied'"></span>
                         </div>
                     </template>
                     <div class="flex justify-between text-gray-600">
@@ -236,7 +245,7 @@
                         </template>
                     </div>
                     <input type="text" :value="formatNumber(amountPaid)" @input="updateAmountPaid($event.target.value)"
-                        placeholder="Ketik jumlah..."
+                        placeholder="Ketik jumlah..." autocomplete="new-password" name="amount_paid_dummy"
                         class="w-full mt-2 px-3 py-2 border border-gray-300 rounded-lg text-right text-base font-medium focus:ring-2 focus:ring-slate-500">
                 </div>
 
@@ -1050,13 +1059,23 @@
                     // Called before opening modal, passing subtotal from posTerminal
                     initRedeemModal(cartTotal) {
                         this.showRedeemModal = true;
-                        this.redeemAmount = 0;
-                        this.tempPointsDiscount = 0;
                         this.redeemError = '';
+                        
                         // Calculate max allowed discount based on percentage
                         let maxDiscountValue = cartTotal * (this.pointsMaxRedeemPercent / 100);
                         // Convert max discount to points (Rp 100 = 1 point)
                         this.maxRedeemAllowed = Math.floor(maxDiscountValue / 100);
+                        
+                        // Auto-fill logic
+                        let availablePoints = this.selectedCustomer?.points_balance || 0;
+                        
+                        if (availablePoints >= this.maxRedeemAllowed) {
+                            this.redeemAmount = this.maxRedeemAllowed;
+                        } else {
+                            this.redeemAmount = availablePoints;
+                        }
+                        
+                        this.calculateRedeemDiscount();
                     },
 
                     confirmRedeemPoints() {
@@ -1540,10 +1559,14 @@
                                 this.cart = this.cart.map(localItem => {
                                     const serverItem = data.items.find(i => i.product_id == localItem.id);
                                     if (serverItem) {
+                                        // Tentukan nama promo jika ada
+                                        let promoName = serverItem.promo_name || null;
+
                                         // Update discount info
                                         return { 
                                             ...localItem, 
                                             discount_amount: parseFloat(serverItem.discount_amount),
+                                            promo_name: promoName,
                                             // Keep other local props
                                         };
                                     }
@@ -1553,6 +1576,7 @@
                                 // Reset flag after Alpine processes the update
                                 this.$nextTick(() => {
                                     this.isUpdatingFromServer = false;
+                                    this.amountPaid = this.finalTotal;
                                 });
                             }
 
@@ -1569,6 +1593,7 @@
                     updatePoints(detail) {
                         this.pointsDiscount = detail.discount || 0;
                         this.pointsToRedeem = detail.redeem || 0;
+                        this.amountPaid = this.finalTotal;
                     },
                     updateCustomer(detail) {
                         this.customerId = detail.customer ? detail.customer.id : null;

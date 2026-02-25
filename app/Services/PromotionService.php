@@ -42,6 +42,7 @@ class PromotionService
             $item->best_discount = 0;
             $item->best_promo = null;
             $item->stack_discounts = []; // For allowStacking = true
+            $item->eligible_promos = [];
         }
 
         foreach ($promotions as $promotion) {
@@ -60,6 +61,8 @@ class PromotionService
                 continue;
 
             foreach ($applicableItems as $item) {
+                $item->eligible_promos[] = $promotion;
+
                 $itemDiscount = 0;
                 if ($promotion->type === 'percentage') {
                     // Capped by item subtotal minus existing discount if stacking
@@ -206,7 +209,20 @@ class PromotionService
 
             'applied_promotions' => $appliedPromotions,
             'items' => $itemsCollection->map(function ($item) {
-                return (array) $item;
+                $arrayItem = (array) $item;
+                $promoName = null;
+                if ($arrayItem['discount_amount'] > 0) {
+                    if (!empty($arrayItem['stack_discounts'])) {
+                        $promoName = $arrayItem['stack_discounts'][0]['promo']->name ?? null;
+                    } elseif (!empty($arrayItem['best_promo'])) {
+                        $promoName = $arrayItem['best_promo']->name ?? null;
+                    }
+                } elseif (!empty($arrayItem['eligible_promos'])) {
+                    $promoName = $arrayItem['eligible_promos'][0]->name ?? null;
+                }
+                $arrayItem['promo_name'] = $promoName;
+                unset($arrayItem['best_promo'], $arrayItem['stack_discounts'], $arrayItem['eligible_promos']);
+                return $arrayItem;
             })->toArray()
         ];
     }

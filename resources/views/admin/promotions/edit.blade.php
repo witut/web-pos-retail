@@ -51,22 +51,22 @@
                         <!-- Visible text input for formatting -->
                         <div class="relative">
                             <span class="absolute left-4 top-2 text-gray-500">Rp</span>
-                            <input type="text" x-model="formattedFixedValue" @input="formatInput" :disabled="type !== 'fixed_amount'"
+                            <input type="text" :value="formattedFixedValue" @input="formatInput" :disabled="type !== 'fixed_amount'"
                                 class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                         </div>
                     </div>
 
                     <div x-show="type === 'buy_x_get_y'" class="md:col-span-2 grid grid-cols-2 gap-4">
-                        <input type="hidden" name="value" value="0">
+                        <input type="hidden" name="value" value="0" :disabled="type !== 'buy_x_get_y'">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Kuantitas Beli (X) <span class="text-red-500">*</span></label>
-                            <input type="number" name="buy_qty" min="1" step="1" x-model="buyQty"
+                            <input type="number" name="buy_qty" min="1" step="1" value="{{ old('buy_qty', $promotion->buy_qty) }}" :disabled="type !== 'buy_x_get_y'"
                                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Contoh: 2">
                             <p class="text-xs text-gray-500 mt-1">Harus beli berapa item agar dapat gratis?</p>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Kuantitas Gratis (Y) <span class="text-red-500">*</span></label>
-                            <input type="number" name="get_qty" min="1" step="1" x-model="getQty"
+                            <input type="number" name="get_qty" min="1" step="1" value="{{ old('get_qty', $promotion->get_qty) }}" :disabled="type !== 'buy_x_get_y'"
                                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Contoh: 1">
                             <p class="text-xs text-gray-500 mt-1">Dapat berapa item gratis?</p>
                         </div>
@@ -148,9 +148,7 @@
                     type: '{{ old('type', $promotion->type) }}',
                     search: '',
                     percentageValue: '{{ old('type', $promotion->type) == 'percentage' ? old('value', $promotion->value) : '' }}',
-                    fixedValue: '{{ old('type', $promotion->type) == 'fixed_amount' ? old('value', $promotion->value) : '' }}',
-                    buyQty: '{{ old('type', $promotion->type) == 'buy_x_get_y' ? old('buy_qty', $promotion->buy_qty) : '' }}',
-                    getQty: '{{ old('type', $promotion->type) == 'buy_x_get_y' ? old('get_qty', $promotion->get_qty) : '' }}',
+                    fixedValue: '{{ old('type', $promotion->type) == 'fixed_amount' ? (int)old('value', $promotion->value) : '' }}',
                     formattedFixedValue: '',
 
                     init() {

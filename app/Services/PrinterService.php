@@ -13,7 +13,7 @@ class PrinterService
     public function generatePrintPayload(Transaction $transaction)
     {
         $transaction->load('items.product', 'cashier', 'customer');
-        
+
         return [
             'store' => [
                 'name' => Setting::getStoreName(),
@@ -29,8 +29,13 @@ class PrinterService
                 'footer' => Setting::getReceiptFooter(),
             ],
             'items' => $transaction->items->map(function ($item) {
+                $parts = explode('|PROMO: ', $item->product_name);
+                $name = $parts[0];
+                $promo_name = count($parts) > 1 ? $parts[1] : null;
+
                 return [
-                    'name' => current(explode('|', $item->product_name)),
+                    'name' => current(explode('|', $name)), // If there are other pipe separators
+                    'promo_name' => $promo_name,
                     'qty' => (float) $item->quantity,
                     'price' => (float) $item->unit_price,
                     'discount' => (float) $item->discount_amount,

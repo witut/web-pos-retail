@@ -134,7 +134,12 @@
             </nav>
 
             <!-- User Info at Bottom -->
-            <div class="p-4 border-t border-slate-800 overflow-hidden">
+            @php
+                $isUserAdmin = auth()->check() && auth()->user()->isAdmin();
+                $profileLink = $isUserAdmin ? route('admin.dashboard') : route('pos.dashboard');
+            @endphp
+            <a href="{{ $profileLink }}"
+                class="block p-4 border-t border-slate-800 hover:bg-slate-800 transition-colors overflow-hidden">
                 <div class="flex items-center space-x-3 whitespace-nowrap">
                     <div class="w-9 h-9 bg-slate-700 rounded-full flex-shrink-0 flex items-center justify-center">
                         <span
@@ -146,7 +151,7 @@
                         <p class="text-xs text-slate-400 truncate">Kasir</p>
                     </div>
                 </div>
-            </div>
+            </a>
         </aside>
 
         <!-- Main Content -->

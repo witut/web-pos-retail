@@ -523,9 +523,14 @@ class TransactionService
             $costPricePerUnit = $product->cost_price * $conversionRate;
             $discountAmount = isset($item['discount_amount']) ? (float) $item['discount_amount'] : 0;
 
+            $productName = $product->name;
+            if (!empty($item['promo_name'])) {
+                $productName .= '|PROMO: ' . $item['promo_name'];
+            }
+
             $preparedItems[] = [
                 'product_id' => $product->id,
-                'product_name' => $product->name,
+                'product_name' => $productName,
                 'unit_name' => $unitName,
                 'qty' => $item['qty'],
                 'unit_price' => $unitPrice, // Harga asli per satuan

@@ -326,6 +326,7 @@ class POSController extends Controller
                     'price' => $item['price'],
                     'unit_name' => $item['unit_name'],
                     'discount_amount' => $item['discount_amount'] ?? 0,
+                    'promo_name' => $item['promo_name'] ?? null,
                 ];
             }, $promoResult['items']);
 

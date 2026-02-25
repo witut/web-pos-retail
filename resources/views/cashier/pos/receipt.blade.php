@@ -193,9 +193,16 @@
             </thead>
             <tbody>
                 @foreach ($transaction->items as $item)
+                    @php
+                        $parts = explode('|PROMO: ', $item->product_name);
+                        $name = current(explode('|', $parts[0]));
+                        $promoName = count($parts) > 1 ? $parts[1] : null;
+
+                        $displayName = $item->product->name ?? $name;
+                    @endphp
                     <tr>
                         <td class="product-name">
-                            {{ Str::limit($item->product->name ?? $item->product_name, 15) }}
+                            {{ Str::limit($displayName, 15) }}
                         </td>
                         <td class="qty">{{ number_format($item->qty) }}</td>
                         <td class="price">{{ number_format($item->unit_price) }}</td>
@@ -204,8 +211,12 @@
                     </tr>
                     @if($item->discount_amount > 0)
                         <tr>
-                            <td colspan="3" style="text-align: right; font-size: 10px; color: #555;">Disc.
-                                {{ Str::limit($item->product->name ?? $item->product_name, 10) }}:
+                            <td colspan="3" style="text-align: right; font-size: 10px; color: #555;">
+                                @if($promoName)
+                                    *** PROMO: {{ Str::limit($promoName, 15) }} ***
+                                @else
+                                    Disc. {{ Str::limit($displayName, 10) }}:
+                                @endif
                             </td>
                             <td class="subtotal" style="font-size: 10px; color: #555;">
                                 -{{ number_format($item->discount_amount) }}</td>
