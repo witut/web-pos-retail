@@ -1,38 +1,127 @@
 <x-layouts.pos :title="'POS Terminal'">
     @include('cashier.pos._session_overlay')
-    <div class="h-full flex" x-data="posTerminal()" x-init="initPOS()" 
-        @keydown.window="handleKeyboard($event)" 
-        @points-updated.window="updatePoints($event.detail)" 
-        @customer-updated.window="updateCustomer($event.detail)"
+    <div class="h-full flex" x-data="posTerminal()" x-init="initPOS()" @keydown.window="handleKeyboard($event)"
+        @points-updated.window="updatePoints($event.detail)" @customer-updated.window="updateCustomer($event.detail)"
         @open-close-register.window="openCloseRegisterModal()"
         @request-cart-total-for-redeem.window="$dispatch('open-redeem-with-cart', taxType === 'inclusive' ? Math.max(0, totalCartValue - promotionDiscount) : Math.round(taxableBase + taxAmount))">
         <!-- Left Panel: Product Search & Cart -->
         <div class="flex-1 flex flex-col p-4 space-y-4">
-            <!-- Search Bar -->
-            <div class="bg-white rounded-xl shadow-sm p-4 relative">
-                <div class="flex space-x-3">
+            <!-- Unified Search Bar: [Qty] [Barcode/Product] | [Customer + Add] -->
+            <div class="bg-white rounded-xl shadow-sm p-3 relative">
+                <div class="flex items-center gap-2">
+                    <!-- Qty Input -->
+                    <div class="w-20 flex-shrink-0">
+                        <input type="number" x-ref="qtyInput" x-model.number="searchQty" min="1" step="1"
+                            @keydown.enter.prevent="$refs.searchInput.focus(); $refs.searchInput.select()"
+                            class="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-center font-semibold text-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
+                            title="Jumlah item">
+                    </div>
+
+                    <!-- Barcode / Product Search -->
                     <div class="flex-1 relative">
                         <input type="text" x-ref="searchInput" x-model="searchQuery"
                             @keydown.enter.prevent="handleSearchEnter()"
                             @keydown.arrow-down.prevent="navigateAutocomplete(1)"
                             @keydown.arrow-up.prevent="navigateAutocomplete(-1)" @keydown.escape="closeAutocomplete()"
-                            @input.debounce.300ms="autocomplete()" placeholder="Scan barcode atau ketik nama produk..."
-                            class="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 text-lg">
-                        <svg class="w-6 h-6 absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" fill="none"
+                            @input.debounce.300ms="autocomplete()" placeholder="Scan barcode atau cari produk..."
+                            class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 text-base">
+                        <svg class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none"
                             stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
                     </div>
-                    <button @click="searchProduct()"
-                        class="px-6 py-3 bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition-colors font-medium">
-                        Cari
-                    </button>
+
+                    <!-- Divider -->
+                    <div class="w-px h-8 bg-gray-300 flex-shrink-0"></div>
+
+                    <!-- Customer Search (inline) -->
+                    <div class="w-56 flex-shrink-0 relative" x-data="customerComponent()"
+                        @restore-customer-state.window="selectCustomer($event.detail)"
+                        @clear-customer.window="clearCustomer()"
+                        @restore-full-state.window="restoreState($event.detail)"
+                        @open-redeem-with-cart.window="initRedeemModal($event.detail)">
+
+                        {{-- Inline: Show name if selected, otherwise show search --}}
+                        <div x-show="selectedCustomer" class="flex items-center gap-1">
+                            <div
+                                class="flex-1 flex items-center gap-1.5 px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm truncate">
+                                <svg class="w-4 h-4 text-slate-500 flex-shrink-0" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                                <span class="font-medium text-gray-800 truncate" x-text="selectedCustomer?.name"></span>
+                                <span x-show="selectedCustomer?.points_balance > 0"
+                                    class="text-xs text-green-600 flex-shrink-0"
+                                    x-text="'(' + formatNumber(selectedCustomer?.points_balance) + ' pt)'"></span>
+                            </div>
+                            <button @click="clearCustomer()"
+                                class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
+                                title="Hapus pelanggan">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div x-show="!selectedCustomer" class="flex items-center gap-1">
+                            <div class="flex-1 relative">
+                                <input type="text" x-model="customerSearch" @input.debounce.300ms="searchCustomers()"
+                                    @focus="customerSearchFocused = true"
+                                    @keydown.arrow-down.prevent="navigateCustomer(1)"
+                                    @keydown.arrow-up.prevent="navigateCustomer(-1)"
+                                    @keydown.enter.prevent="selectCurrentCustomer()" placeholder="Pelanggan..."
+                                    class="w-full pl-8 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 text-sm">
+                                <svg class="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400"
+                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                            </div>
+                            @if($cashierCanCreate ?? true)
+                                <button @click="openQuickAddModal()"
+                                    class="p-2.5 bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition-colors flex-shrink-0"
+                                    title="Tambah Pelanggan Baru">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 4v16m8-8H4" />
+                                    </svg>
+                                </button>
+                            @endif
+                        </div>
+
+                        {{-- Customer Search Dropdown --}}
+                        <div x-show="customerResults.length > 0 && customerSearchFocused" x-cloak
+                            @click.outside="customerSearchFocused = false"
+                            class="absolute left-0 right-0 z-50 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+                            <template x-for="(customer, index) in customerResults" :key="customer.id">
+                                <div @click="selectCustomer(customer)"
+                                    :class="{'bg-slate-100': index === customerSelectedIndex, 'hover:bg-slate-50': index !== customerSelectedIndex}"
+                                    class="px-3 py-2 cursor-pointer border-b border-gray-100 last:border-0">
+                                    <div class="flex justify-between items-start">
+                                        <div>
+                                            <p class="font-medium text-gray-800 text-sm" x-text="customer.name"></p>
+                                            <p class="text-xs text-gray-500" x-text="customer.phone"></p>
+                                        </div>
+                                        <span class="text-xs font-medium text-green-600"
+                                            x-text="formatNumber(customer.points_balance) + ' pt'"></span>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+
+                        {{-- Quick Add Customer Modal --}}
+                        @include('cashier.pos._customer-quick-add-modal')
+                        {{-- Redeem Points Modal --}}
+                        @include('cashier.pos._customer-redeem-modal')
+                    </div>
                 </div>
 
-                <!-- Autocomplete Dropdown -->
+                <!-- Autocomplete Dropdown (for products) -->
                 <div x-show="autocompleteResults.length > 0" x-cloak
-                    class="absolute left-4 right-4 z-50 mt-2 bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden">
+                    class="absolute left-3 right-3 z-50 mt-2 bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden">
                     <template x-for="(item, idx) in autocompleteResults" :key="item.id">
                         <div @click="selectProductFromAutocomplete(idx)"
                             :class="{ 'bg-slate-100': autocompleteIndex === idx }"
@@ -53,15 +142,14 @@
                 </div>
 
                 <!-- Error Message -->
-                <div x-show="searchError" x-cloak class="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <div x-show="searchError" x-cloak class="mt-2 p-2 bg-red-50 border border-red-200 rounded-lg">
                     <p class="text-red-700 text-sm" x-text="searchError"></p>
                 </div>
             </div>
 
-            {{-- Customer Selection Component --}}
-            @include('cashier.pos._customer-component', [
-                'cashierCanCreate' => $cashierCanCreate
-            ])
+            {{-- Customer Selected Details (Points, Redeem, etc.) - shown below search bar when customer is selected
+            --}}
+            @include('cashier.pos._customer-details')
 
             <!-- Cart Table -->
             <div class="flex-1 bg-white rounded-xl shadow-sm overflow-hidden flex flex-col">
@@ -92,8 +180,15 @@
 
                                         <!-- Promo Badge -->
                                         <div x-show="item.promo_name" class="mt-1" x-transition>
-                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-pink-100 text-pink-700 border border-pink-200 uppercase tracking-wider">
-                                                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path></svg>
+                                            <span
+                                                class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-pink-100 text-pink-700 border border-pink-200 uppercase tracking-wider">
+                                                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor"
+                                                    viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z">
+                                                    </path>
+                                                </svg>
                                                 <span x-text="item.promo_name"></span>
                                             </span>
                                         </div>
@@ -141,17 +236,24 @@
                                     </td>
                                     <td class="px-4 py-3 text-right text-sm">
                                         <div x-show="item.discount_amount > 0">
-                                            <div class="line-through text-gray-400 text-xs" x-text="formatCurrency(item.selling_price || item.price)"></div>
-                                            <div class="font-medium text-green-600" x-text="formatCurrency((item.selling_price || item.price) - (item.discount_amount / item.qty))"></div>
+                                            <div class="line-through text-gray-400 text-xs"
+                                                x-text="formatCurrency(item.selling_price || item.price)"></div>
+                                            <div class="font-medium text-green-600"
+                                                x-text="formatCurrency((item.selling_price || item.price) - (item.discount_amount / item.qty))">
+                                            </div>
                                         </div>
-                                        <div x-show="!item.discount_amount" x-text="formatCurrency(item.selling_price || item.price)"></div>
+                                        <div x-show="!item.discount_amount"
+                                            x-text="formatCurrency(item.selling_price || item.price)"></div>
                                     </td>
                                     <td class="px-4 py-3 text-right font-medium">
                                         <div x-show="item.discount_amount > 0">
-                                            <div class="line-through text-gray-400 text-xs" x-text="formatCurrency(item.subtotal)"></div>
-                                            <div class="text-green-600" x-text="formatCurrency(item.subtotal - item.discount_amount)"></div>
+                                            <div class="line-through text-gray-400 text-xs"
+                                                x-text="formatCurrency(item.subtotal)"></div>
+                                            <div class="text-green-600"
+                                                x-text="formatCurrency(item.subtotal - item.discount_amount)"></div>
                                         </div>
-                                        <div x-show="!item.discount_amount" x-text="formatCurrency(item.subtotal)"></div>
+                                        <div x-show="!item.discount_amount" x-text="formatCurrency(item.subtotal)">
+                                        </div>
                                     </td>
                                     <td class="px-4 py-3">
                                         <button @click="removeItem(index)"
@@ -206,7 +308,7 @@
                     </div>
                     <template x-for="promo in appliedPromotions" :key="promo.name">
                         <div class="flex justify-between text-xs italic px-2"
-                             :class="promo.name.includes('Gagal:') ? 'text-red-500' : 'text-blue-500'">
+                            :class="promo.name.includes('Gagal:') ? 'text-red-500' : 'text-blue-500'">
                             <span x-text="promo.name"></span>
                             <span x-text="promo.name.includes('Gagal:') ? 'Ignored' : 'Applied'"></span>
                         </div>
@@ -227,8 +329,7 @@
                 <div class="mt-4 pt-2 border-t border-gray-100">
                     <label class="block text-xs font-medium text-gray-500 mb-1">Kode Kupon</label>
                     <div class="flex space-x-2">
-                        <input type="text" x-model.debounce.500ms="couponCode" 
-                            placeholder="Masukkan kode..."
+                        <input type="text" x-model.debounce.500ms="couponCode" placeholder="Masukkan kode..."
                             class="flex-1 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                     </div>
                 </div>
@@ -267,7 +368,8 @@
                         class="flex-1 py-2 bg-amber-500 text-white text-sm font-bold rounded-xl hover:bg-amber-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                         <span class="flex items-center justify-center">
                             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                             Hold (F8)
                         </span>
@@ -276,7 +378,8 @@
                         class="flex-1 py-2 bg-slate-600 text-white text-sm font-bold rounded-xl hover:bg-slate-700 transition-colors relative">
                         <span class="flex items-center justify-center">
                             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 6h16M4 10h16M4 14h16M4 18h16" />
                             </svg>
                             Daftar Hold
                             <span x-show="heldTransactions.length > 0" x-text="heldTransactions.length"
@@ -285,7 +388,7 @@
                         </span>
                     </button>
                 </div>
-                
+
                 <button type="button" @click="openPaymentModal()" :disabled="cart.length === 0"
                     class="w-full py-3 bg-emerald-600 text-white text-base font-bold rounded-xl hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-2">
                     <span class="flex items-center justify-center">
@@ -351,9 +454,12 @@
                         </div>
 
                         <!-- Error Message -->
-                        <div x-show="paymentError" x-cloak class="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start">
-                            <svg class="w-5 h-5 text-red-600 mt-0.5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        <div x-show="paymentError" x-cloak
+                            class="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start">
+                            <svg class="w-5 h-5 text-red-600 mt-0.5 mr-2" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                             <span class="text-red-700 text-sm" x-text="paymentError"></span>
                         </div>
@@ -388,20 +494,26 @@
                     <div x-show="paymentMethod === 'cash'">
                         <label class="block text-sm font-medium text-gray-700 mb-2">Uang Diterima</label>
                         <input type="text" x-ref="amountPaidInput" :value="formatNumber(amountPaid)"
-                            @input="updateAmountPaid($event.target.value)" @keydown.enter.prevent="processCheckout()"
-                            placeholder="0"
+                            @input="updateAmountPaid($event.target.value)"
+                            @keydown.enter.prevent="$refs.btnProcessPayment.focus()" placeholder="0"
                             class="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg text-right focus:ring-2 focus:ring-slate-500">
                     </div>
                 </div>
 
                 <div class="px-6 py-4 bg-gray-50 flex space-x-3">
-                    <button @click="closePaymentModal()"
-                        class="flex-1 py-3 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-colors">
+                    <button x-ref="btnCancelPayment" @click="closePaymentModal()"
+                        @keydown.enter.prevent="closePaymentModal()"
+                        @keydown.arrow-right.prevent="$refs.btnProcessPayment.focus()"
+                        @keydown.arrow-left.prevent="$refs.btnProcessPayment.focus()"
+                        class="flex-1 py-3 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-colors focus:ring-2 focus:ring-slate-400 focus:outline-none">
                         Batal
                     </button>
-                    <button @click="processCheckout()"
+                    <button x-ref="btnProcessPayment" @click="processCheckout()"
+                        @keydown.enter.prevent="processCheckout()"
+                        @keydown.arrow-left.prevent="$refs.btnCancelPayment.focus()"
+                        @keydown.arrow-right.prevent="$refs.btnCancelPayment.focus()"
                         :disabled="isProcessing || (paymentMethod === 'cash' && change < 0)"
-                        class="flex-1 py-3 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        class="flex-1 py-3 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-emerald-400 focus:outline-none">
                         <span x-show="!isProcessing">Proses Pembayaran</span>
                         <span x-show="isProcessing">Memproses...</span>
                     </button>
@@ -411,37 +523,49 @@
         <!-- Toast Container -->
         <div class="fixed bottom-4 right-4 z-[70] flex flex-col items-end space-y-2 pointer-events-none">
             <template x-for="toast in toasts" :key="toast.id">
-                <div x-show="true"
-                     x-transition:enter="transition ease-out duration-300 transform"
-                     x-transition:enter-start="translate-y-4 opacity-0 scale-95"
-                     x-transition:enter-end="translate-y-0 opacity-100 scale-100"
-                     x-transition:leave="transition ease-in duration-200 transform"
-                     x-transition:leave-start="translate-y-0 opacity-100 scale-100"
-                     x-transition:leave-end="translate-y-4 opacity-0 scale-95"
-                     class="max-w-md w-full sm:min-w-[350px] bg-white shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden">
+                <div x-show="true" x-transition:enter="transition ease-out duration-300 transform"
+                    x-transition:enter-start="translate-y-4 opacity-0 scale-95"
+                    x-transition:enter-end="translate-y-0 opacity-100 scale-100"
+                    x-transition:leave="transition ease-in duration-200 transform"
+                    x-transition:leave-start="translate-y-0 opacity-100 scale-100"
+                    x-transition:leave-end="translate-y-4 opacity-0 scale-95"
+                    class="max-w-md w-full sm:min-w-[350px] bg-white shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden">
                     <div class="p-4 flex items-center">
                         <div class="flex-shrink-0">
                             <!-- Success Icon -->
-                            <svg x-show="toast.type === 'success'" class="h-6 w-6 text-green-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            <svg x-show="toast.type === 'success'" class="h-6 w-6 text-green-400"
+                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                             <!-- Info Icon -->
-                            <svg x-show="toast.type === 'info'" class="h-6 w-6 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            <svg x-show="toast.type === 'info'" class="h-6 w-6 text-blue-400"
+                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                             <!-- Error Icon -->
-                            <svg x-show="toast.type === 'error'" class="h-6 w-6 text-red-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            <svg x-show="toast.type === 'error'" class="h-6 w-6 text-red-400"
+                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                         </div>
                         <div class="ml-3 w-0 flex-1 pt-0.5">
                             <p class="text-sm font-medium text-gray-900" x-text="toast.message"></p>
                         </div>
                         <div class="ml-4 flex-shrink-0 flex">
-                            <button @click="removeToast(toast.id)" class="bg-white rounded-md inline-flex text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            <button @click="removeToast(toast.id)"
+                                class="bg-white rounded-md inline-flex text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                                 <span class="sr-only">Close</span>
-                                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
+                                    fill="currentColor">
+                                    <path fill-rule="evenodd"
+                                        d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                                        clip-rule="evenodd" />
                                 </svg>
                             </button>
                         </div>
@@ -464,11 +588,17 @@
                 <p class="text-xl font-mono font-bold text-slate-700 mb-6" x-text="lastInvoice"></p>
                 <div class="space-y-3">
                     <button @click="printReceipt()" x-ref="printReceiptBtn"
-                        class="w-full py-3 bg-slate-800 text-white font-medium rounded-lg hover:bg-slate-900 transition-colors">
+                        @keydown.arrow-down.prevent="$refs.btnNewTransaction.focus()"
+                        @keydown.arrow-up.prevent="$refs.btnNewTransaction.focus()"
+                        @keydown.enter.prevent="printReceipt()"
+                        class="w-full py-3 bg-slate-800 text-white font-medium rounded-lg hover:bg-slate-900 transition-colors focus:ring-2 focus:ring-slate-400 focus:outline-none">
                         Cetak Struk
                     </button>
-                    <button @click="newTransaction()"
-                        class="w-full py-3 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-colors">
+                    <button x-ref="btnNewTransaction" @click="newTransaction()"
+                        @keydown.arrow-up.prevent="$refs.printReceiptBtn.focus()"
+                        @keydown.arrow-down.prevent="$refs.printReceiptBtn.focus()"
+                        @keydown.enter.prevent="newTransaction()"
+                        class="w-full py-3 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-colors focus:ring-2 focus:ring-emerald-400 focus:outline-none">
                         Transaksi Baru
                     </button>
                 </div>
@@ -502,25 +632,36 @@
             </div>
         </div>
         <!-- Hold Name Prompt Modal -->
-        <div x-show="showHoldPromptModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-            @keydown.escape.window="if(showHoldPromptModal) showHoldPromptModal = false"
-            @keydown.enter.window="if(showHoldPromptModal) confirmHoldTransaction()">
+        <div x-show="showHoldPromptModal" x-cloak
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+            @keydown.escape.window="if(showHoldPromptModal) showHoldPromptModal = false">
             <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden"
                 @click.outside="showHoldPromptModal = false">
                 <div class="px-6 py-4 bg-amber-500 text-white flex justify-between items-center">
                     <h3 class="font-bold">Simpan Transaksi (Hold)</h3>
                     <button @click="showHoldPromptModal = false" class="text-amber-100 hover:text-white">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
                     </button>
                 </div>
                 <div class="p-6">
                     <label class="block text-sm font-medium text-gray-700 mb-2">Nama/Referensi Hold</label>
                     <input type="text" x-model="holdNameInput" x-ref="holdNameInputField"
-                        placeholder="Cth: Bapak Baju Merah"
+                        @keydown.enter.prevent="$refs.btnHoldSave.focus()" placeholder="Cth: Bapak Baju Merah"
                         class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 mb-4">
                     <div class="flex space-x-3 mt-2">
-                        <button @click="showHoldPromptModal = false" class="flex-1 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300">Batal</button>
-                        <button @click="confirmHoldTransaction()" class="flex-1 py-2 bg-amber-500 text-white rounded-lg font-bold hover:bg-amber-600">Simpan</button>
+                        <button x-ref="btnHoldCancel" @click="showHoldPromptModal = false"
+                            @keydown.enter.prevent="showHoldPromptModal = false"
+                            @keydown.arrow-right.prevent="$refs.btnHoldSave.focus()"
+                            @keydown.arrow-left.prevent="$refs.btnHoldSave.focus()"
+                            class="flex-1 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 focus:ring-2 focus:ring-gray-400 focus:outline-none">Batal</button>
+                        <button x-ref="btnHoldSave" @click="confirmHoldTransaction()"
+                            @keydown.enter.prevent="confirmHoldTransaction()"
+                            @keydown.arrow-left.prevent="$refs.btnHoldCancel.focus()"
+                            @keydown.arrow-right.prevent="$refs.btnHoldCancel.focus()"
+                            class="flex-1 py-2 bg-amber-500 text-white rounded-lg font-bold hover:bg-amber-600 focus:ring-2 focus:ring-amber-400 focus:outline-none">Simpan</button>
                     </div>
                 </div>
             </div>
@@ -533,41 +674,70 @@
                 @click.outside="showHoldModal = false">
                 <div class="px-6 py-4 bg-slate-800 text-white flex justify-between items-center flex-shrink-0">
                     <h3 class="font-bold flex items-center text-lg">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
+                        </svg>
                         Daftar Transaksi Ditahan (Hold)
                     </h3>
                     <button @click="showHoldModal = false" class="text-slate-400 hover:text-white">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
                     </button>
                 </div>
                 <div class="p-6 overflow-y-auto custom-scrollbar bg-slate-50 flex-1">
                     <template x-if="heldTransactions.length === 0">
                         <div class="text-center py-10 bg-white rounded-xl border border-dashed border-gray-300">
-                            <svg class="w-12 h-12 text-slate-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                            <svg class="w-12 h-12 text-slate-300 mx-auto mb-3" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2">
+                                </path>
+                            </svg>
                             <p class="text-gray-500 font-medium">Tidak ada transaksi yang ditahan.</p>
                         </div>
                     </template>
                     <template x-if="heldTransactions.length > 0">
                         <div class="space-y-3">
                             <template x-for="(held, index) in heldTransactions" :key="held.id">
-                                <div class="bg-white border rounded-xl p-4 flex justify-between items-center shadow-sm hover:shadow-md transition-shadow">
+                                <div
+                                    class="bg-white border rounded-xl p-4 flex justify-between items-center shadow-sm hover:shadow-md transition-shadow">
                                     <div class="flex-1">
                                         <h4 class="font-bold text-gray-800 text-lg" x-text="held.name"></h4>
                                         <div class="flex items-center text-sm text-gray-500 mt-1 space-x-2">
-                                            <span class="flex items-center"><svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> <span x-text="new Date(held.created_at).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'})"></span></span>
+                                            <span class="flex items-center"><svg class="w-4 h-4 mr-1" fill="none"
+                                                    stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                </svg> <span
+                                                    x-text="new Date(held.created_at).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'})"></span></span>
                                             <span>&bull;</span>
-                                            <span class="font-medium bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-xs" x-text="held.cart.length + ' item'"></span>
+                                            <span
+                                                class="font-medium bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-xs"
+                                                x-text="held.cart.length + ' item'"></span>
                                             <span>&bull;</span>
-                                            <span class="font-bold text-emerald-600" x-text="formatCurrency(held.totals.final_total)"></span>
+                                            <span class="font-bold text-emerald-600"
+                                                x-text="formatCurrency(held.totals.final_total)"></span>
                                         </div>
-                                        <p class="text-xs text-gray-500 mt-1.5 bg-gray-50 inline-block px-2 py-1 rounded" x-show="held.customer_name" x-text="'Pelanggan: ' + held.customer_name"></p>
+                                        <p class="text-xs text-gray-500 mt-1.5 bg-gray-50 inline-block px-2 py-1 rounded"
+                                            x-show="held.customer_name" x-text="'Pelanggan: ' + held.customer_name"></p>
                                     </div>
                                     <div class="flex space-x-2 ml-4 flex-shrink-0">
-                                        <button @click="resumeTransaction(index)" class="px-4 py-2 bg-emerald-500 text-white font-bold rounded-lg hover:bg-emerald-600 transition-colors shadow-sm flex items-center">
+                                        <button @click="resumeTransaction(index)"
+                                            class="px-4 py-2 bg-emerald-500 text-white font-bold rounded-lg hover:bg-emerald-600 transition-colors shadow-sm flex items-center">
                                             Lanjutkan
                                         </button>
-                                        <button @click="deleteHeldTransaction(index)" class="px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors border border-red-100" title="Hapus">
-                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                        <button @click="deleteHeldTransaction(index)"
+                                            class="px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors border border-red-100"
+                                            title="Hapus">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+                                                </path>
+                                            </svg>
                                         </button>
                                     </div>
                                 </div>
@@ -579,39 +749,48 @@
         </div>
 
         <!-- Close Register Modal -->
-        <div x-show="showCloseRegisterModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+        <div x-show="showCloseRegisterModal" x-cloak
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
             @keydown.escape.prevent="closeCloseRegisterModal()">
             <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl mx-4 overflow-hidden flex flex-col max-h-[90vh]"
                 @click.outside="closeCloseRegisterModal()">
-                
+
                 <!-- Header -->
                 <div class="px-6 py-4 bg-slate-800 text-white flex justify-between items-center">
                     <h3 class="text-xl font-bold">Tutup Register Kasir (Z-Report)</h3>
                     <button @click="closeCloseRegisterModal()" class="text-slate-400 hover:text-white">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
                 </div>
 
                 <!-- Content -->
                 <div class="p-6 overflow-y-auto bg-gray-50 flex-1">
-                    
+
                     <!-- Loading State -->
                     <div x-show="isLoadingCloseRegister" class="flex flex-col items-center justify-center py-12">
-                        <svg class="animate-spin h-10 w-10 text-slate-600 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        <svg class="animate-spin h-10 w-10 text-slate-600 mb-4" xmlns="http://www.w3.org/2000/svg"
+                            fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                            </circle>
+                            <path class="opacity-75" fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                            </path>
                         </svg>
                         <p class="text-gray-500">Memuat ringkasan sesi...</p>
                     </div>
 
                     <!-- Error State -->
-                    <div x-show="!isLoadingCloseRegister && closeRegisterError" class="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
+                    <div x-show="!isLoadingCloseRegister && closeRegisterError"
+                        class="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
                         <div class="flex">
                             <div class="flex-shrink-0">
                                 <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                                    <path fill-rule="evenodd"
+                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                                        clip-rule="evenodd" />
                                 </svg>
                             </div>
                             <div class="ml-3">
@@ -621,37 +800,42 @@
                     </div>
 
                     <!-- Data Loaded -->
-                    <div x-show="!isLoadingCloseRegister && closeRegisterData" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        
+                    <div x-show="!isLoadingCloseRegister && closeRegisterData"
+                        class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
                         <!-- Summary Card -->
                         <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
                             <h3 class="text-lg font-medium text-gray-900 border-b pb-2 mb-4">Ringkasan Sesi</h3>
-                            
+
                             <dl class="space-y-4">
                                 <div class="flex justify-between items-center">
                                     <dt class="text-sm text-gray-500">Waktu Buka</dt>
-                                    <dd class="text-sm font-medium text-gray-900" 
+                                    <dd class="text-sm font-medium text-gray-900"
                                         x-text="new Date(closeRegisterData?.session?.opened_at).toLocaleDateString('id-ID', {day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'})">
                                     </dd>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <dt class="text-sm text-gray-500">Modal Awal</dt>
-                                    <dd class="text-sm font-medium text-gray-900" x-text="formatCurrency(closeRegisterData?.report?.opening_cash)"></dd>
+                                    <dd class="text-sm font-medium text-gray-900"
+                                        x-text="formatCurrency(closeRegisterData?.report?.opening_cash)"></dd>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <dt class="text-sm text-gray-500">Total Penjualan Tunai</dt>
-                                    <dd class="text-sm font-bold text-green-600" x-text="'+ ' + formatCurrency(closeRegisterData?.report?.cash_sales)"></dd>
+                                    <dd class="text-sm font-bold text-green-600"
+                                        x-text="'+ ' + formatCurrency(closeRegisterData?.report?.cash_sales)"></dd>
                                 </div>
                                 <template x-if="closeRegisterData?.report?.cash_out > 0">
                                     <div class="flex justify-between items-center">
                                         <dt class="text-sm text-gray-500">Pengeluaran Kas</dt>
-                                        <dd class="text-sm font-bold text-red-600" x-text="'- ' + formatCurrency(closeRegisterData?.report?.cash_out)"></dd>
+                                        <dd class="text-sm font-bold text-red-600"
+                                            x-text="'- ' + formatCurrency(closeRegisterData?.report?.cash_out)"></dd>
                                     </div>
                                 </template>
-        
+
                                 <div class="pt-4 border-t flex justify-between items-center">
                                     <dt class="text-base font-bold text-gray-900">Total Ekspektasi Sistem</dt>
-                                    <dd class="text-lg font-bold text-gray-900" x-text="formatCurrency(closeRegisterData?.report?.expected_cash)"></dd>
+                                    <dd class="text-lg font-bold text-gray-900"
+                                        x-text="formatCurrency(closeRegisterData?.report?.expected_cash)"></dd>
                                 </div>
                             </dl>
                         </div>
@@ -659,28 +843,32 @@
                         <!-- Input Form -->
                         <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 h-full">
                             <h3 class="text-lg font-medium text-gray-900 border-b pb-2 mb-4">Input Fisik Uang</h3>
-                            
+
                             <form action="{{ route('cashier.shift.update') }}" method="POST" x-ref="closeRegisterForm">
                                 @csrf
                                 <div class="space-y-6">
                                     <div>
-                                        <label for="closing_cash" class="block text-sm font-medium text-gray-700">Total Uang di Laci</label>
+                                        <label for="closing_cash" class="block text-sm font-medium text-gray-700">Total
+                                            Uang di Laci</label>
                                         <div class="mt-1 relative rounded-md shadow-sm">
-                                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <div
+                                                class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                                 <span class="text-gray-500 sm:text-lg">Rp</span>
                                             </div>
-                                            <input type="text" x-model="closingCashDisplay" @input="formatClosingCash" required autofocus
-                                                @keydown.enter.prevent="verifyCloseRegister()"
+                                            <input type="text" x-model="closingCashDisplay" @input="formatClosingCash"
+                                                required autofocus @keydown.enter.prevent="verifyCloseRegister()"
                                                 class="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 sm:text-lg border-gray-300 rounded-md py-3 font-medium transition-all"
                                                 placeholder="0">
                                             <input type="hidden" name="closing_cash" x-model="closingCashValue">
                                         </div>
-                                        <p class="mt-2 text-xs text-gray-500">Hitung semua uang tunai fisik yang ada di laci kasir.</p>
+                                        <p class="mt-2 text-xs text-gray-500">Hitung semua uang tunai fisik yang ada di
+                                            laci kasir.</p>
                                     </div>
 
                                     <div>
-                                        <label for="notes" class="block text-sm font-medium text-gray-700">Catatan (Opsional)</label>
-                                        <textarea name="notes" id="notes" rows="3" 
+                                        <label for="notes" class="block text-sm font-medium text-gray-700">Catatan
+                                            (Opsional)</label>
+                                        <textarea name="notes" id="notes" rows="3"
                                             class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md mt-1"
                                             placeholder="Alasan selisih, dll..."></textarea>
                                     </div>
@@ -690,7 +878,7 @@
                                             class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-base font-bold text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors">
                                             Tutup Register & Logout
                                         </button>
-                                        
+
                                         <button type="button" @click="closeCloseRegisterModal()"
                                             class="w-full flex justify-center py-3 px-4 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none transition-colors">
                                             Batal
@@ -709,40 +897,57 @@
             @keydown.escape.window="if(showReturnModal) closeReturnModal()">
             <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col mx-4"
                 @click.outside="closeReturnModal()">
-                
-                <div class="px-6 py-4 bg-orange-600 text-white flex justify-between items-center rounded-t-2xl flex-shrink-0">
+
+                <div
+                    class="px-6 py-4 bg-orange-600 text-white flex justify-between items-center rounded-t-2xl flex-shrink-0">
                     <h3 class="text-xl font-bold flex items-center">
-                        <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z"></path></svg>
+                        <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z">
+                            </path>
+                        </svg>
                         Retur Transaksi & Supervisor Override
                     </h3>
                     <button @click="closeReturnModal()" class="text-white hover:text-orange-200">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
                     </button>
                 </div>
 
                 <div class="p-6 overflow-y-auto flex-1 custom-scrollbar">
-                    
+
                     <!-- Search Invoice Form -->
                     <div x-show="!returnTransaction && !returnSuccess" class="space-y-4">
-                        <p class="text-gray-600">Masukkan Nomor Invoice pelanggan untuk memproses retur barang langsung dari POS. Dibutuhkan <strong>PIN Admin/Supervisor</strong> untuk menyelesaikan proses.</p>
+                        <p class="text-gray-600">Masukkan Nomor Invoice pelanggan untuk memproses retur barang langsung
+                            dari POS. Dibutuhkan <strong>PIN Admin/Supervisor</strong> untuk menyelesaikan proses.</p>
                         <div class="flex space-x-3 mt-4">
                             <input type="text" x-model="returnSearchInvoice" x-ref="returnInvoiceInput"
-                                @keydown.enter="searchReturnInvoice()"
-                                placeholder="Contoh: INV/2026/..."
+                                @keydown.enter="searchReturnInvoice()" placeholder="Contoh: INV/2026/..."
                                 class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 uppercase text-lg">
                             <button @click="searchReturnInvoice()" :disabled="isProcessingReturn"
                                 class="px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium disabled:opacity-50 flex items-center">
-                                <svg x-show="isProcessingReturn" class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                <svg x-show="isProcessingReturn" class="animate-spin -ml-1 mr-2 h-5 w-5 text-white"
+                                    fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                        stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor"
+                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                    </path>
                                 </svg>
                                 Cari Invoice
                             </button>
                         </div>
-                        
+
                         <div x-show="returnError" x-collapse>
-                            <div class="mt-4 p-4 items-start bg-red-50 text-red-700 rounded-lg border border-red-200 flex">
-                                <svg class="w-5 h-5 mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <div
+                                class="mt-4 p-4 items-start bg-red-50 text-red-700 rounded-lg border border-red-200 flex">
+                                <svg class="w-5 h-5 mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
                                 <span x-text="returnError"></span>
                             </div>
                         </div>
@@ -751,7 +956,10 @@
                     <!-- Success Message -->
                     <div x-show="returnSuccess" x-transition.duration.500ms class="text-center py-10">
                         <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                            <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M5 13l4 4L19 7"></path>
+                            </svg>
                         </div>
                         <h4 class="text-2xl font-bold text-gray-800 mb-2">Retur Berhasil!</h4>
                         <p class="text-gray-600 text-lg" x-text="returnSuccess"></p>
@@ -759,10 +967,12 @@
 
                     <!-- Return Details Form -->
                     <div x-show="returnTransaction && !returnSuccess" x-transition>
-                        <div class="bg-gray-50 p-4 rounded-lg mb-6 flex justify-between items-center border border-gray-200">
+                        <div
+                            class="bg-gray-50 p-4 rounded-lg mb-6 flex justify-between items-center border border-gray-200">
                             <div>
                                 <p class="text-sm text-gray-500">Invoice</p>
-                                <p class="font-bold text-gray-800 text-lg" x-text="returnTransaction?.invoice_number"></p>
+                                <p class="font-bold text-gray-800 text-lg" x-text="returnTransaction?.invoice_number">
+                                </p>
                             </div>
                             <div class="text-right">
                                 <p class="text-sm text-gray-500">Pelanggan</p>
@@ -790,18 +1000,28 @@
                                         <tr class="hover:bg-orange-50/50 transition-colors">
                                             <td class="px-4 py-3">
                                                 <div class="font-medium text-gray-900" x-text="item.product_name"></div>
-                                                <div class="text-xs text-gray-500">Terbeli awal: <span x-text="item.original_qty"></span>, Sudah diretur: <span x-text="item.returned_qty"></span></div>
+                                                <div class="text-xs text-gray-500">Terbeli awal: <span
+                                                        x-text="item.original_qty"></span>, Sudah diretur: <span
+                                                        x-text="item.returned_qty"></span></div>
                                             </td>
-                                            <td class="px-4 py-3 text-right font-medium text-slate-700" x-text="formatCurrency(item.net_price)"></td>
+                                            <td class="px-4 py-3 text-right font-medium text-slate-700"
+                                                x-text="formatCurrency(item.net_price)"></td>
                                             <td class="px-4 py-3 text-center">
-                                                <span class="bg-blue-100 text-blue-800 text-xs font-bold px-2 py-1 rounded" x-text="item.max_qty"></span>
+                                                <span
+                                                    class="bg-blue-100 text-blue-800 text-xs font-bold px-2 py-1 rounded"
+                                                    x-text="item.max_qty"></span>
                                             </td>
                                             <td class="px-4 py-3">
                                                 <div class="flex items-center">
-                                                    <button type="button" @click="if(item.return_qty > 0) item.return_qty--" class="px-2 py-1 bg-gray-100 border border-gray-300 rounded-l hover:bg-gray-200">-</button>
-                                                    <input type="number" x-model.number="item.return_qty" min="0" :max="item.max_qty"
+                                                    <button type="button"
+                                                        @click="if(item.return_qty > 0) item.return_qty--"
+                                                        class="px-2 py-1 bg-gray-100 border border-gray-300 rounded-l hover:bg-gray-200">-</button>
+                                                    <input type="number" x-model.number="item.return_qty" min="0"
+                                                        :max="item.max_qty"
                                                         class="w-full px-2 py-1 border-y border-gray-300 text-center focus:ring-orange-500 focus:border-orange-500 appearance-none m-0">
-                                                    <button type="button" @click="if(item.return_qty < item.max_qty) item.return_qty++" class="px-2 py-1 bg-gray-100 border border-gray-300 rounded-r hover:bg-gray-200">+</button>
+                                                    <button type="button"
+                                                        @click="if(item.return_qty < item.max_qty) item.return_qty++"
+                                                        class="px-2 py-1 bg-gray-100 border border-gray-300 rounded-r hover:bg-gray-200">+</button>
                                                 </div>
                                             </td>
                                             <td class="px-4 py-3 text-left">
@@ -820,20 +1040,27 @@
                         <!-- Otorisasi Section -->
                         <div class="bg-orange-50 p-5 rounded-xl border border-orange-200 shadow-inner">
                             <h4 class="font-bold text-orange-800 mb-4 flex items-center">
-                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z">
+                                    </path>
+                                </svg>
                                 Otorisasi Supervisor
                             </h4>
-                            
+
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
-                                    <label class="block text-sm font-medium text-orange-900 mb-1">Catatan / Alasan Retur</label>
-                                    <input type="text" x-model="returnReason" placeholder="Misal: Salah ukuran, cacat pabrik"
+                                    <label class="block text-sm font-medium text-orange-900 mb-1">Catatan / Alasan
+                                        Retur</label>
+                                    <input type="text" x-model="returnReason"
+                                        placeholder="Misal: Salah ukuran, cacat pabrik"
                                         class="w-full px-4 py-3 border border-orange-300 rounded-lg focus:ring-orange-500 focus:border-orange-500 bg-white">
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-orange-900 mb-1">PIN Otorisasi Admin <span class="text-red-500">*</span></label>
-                                    <input type="password" x-model="adminPin" maxlength="6" placeholder="******" required
-                                        @keydown.enter="submitReturn()" autocomplete="off"
+                                    <label class="block text-sm font-medium text-orange-900 mb-1">PIN Otorisasi Admin
+                                        <span class="text-red-500">*</span></label>
+                                    <input type="password" x-model="adminPin" maxlength="6" placeholder="******"
+                                        required @keydown.enter="submitReturn()" autocomplete="off"
                                         class="w-full text-center tracking-widest text-2xl font-mono px-4 py-2 border border-orange-300 rounded-lg focus:ring-orange-500 focus:border-orange-500 bg-white placeholder-gray-300">
                                 </div>
                             </div>
@@ -853,9 +1080,13 @@
                             </button>
                             <button @click="submitReturn()" type="button" :disabled="isProcessingReturn"
                                 class="px-6 py-2.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-bold disabled:opacity-50 flex items-center transition-colors shadow-sm">
-                                <svg x-show="isProcessingReturn" class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                <svg x-show="isProcessingReturn" class="animate-spin -ml-1 mr-2 h-5 w-5 text-white"
+                                    fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                        stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor"
+                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                    </path>
                                 </svg>
                                 Proses Retur
                             </button>
@@ -949,7 +1180,7 @@
                         this.customerResults = [];
                         this.customerSelectedIndex = -1;
                         this.customerSearchFocused = false;
-                        
+
                         // Reset points on customer change
                         this.pointsToRedeem = 0;
                         this.pointsDiscount = 0;
@@ -969,7 +1200,7 @@
                         this.selectedCustomer = detail.customer;
                         this.pointsToRedeem = detail.pointsToRedeem || 0;
                         this.pointsDiscount = detail.pointsDiscount || 0;
-                        
+
                         this.$dispatch('points-updated', { discount: this.pointsDiscount, redeem: this.pointsToRedeem });
                         this.$dispatch('customer-updated', { customer: this.selectedCustomer });
                     },
@@ -1060,21 +1291,21 @@
                     initRedeemModal(cartTotal) {
                         this.showRedeemModal = true;
                         this.redeemError = '';
-                        
+
                         // Calculate max allowed discount based on percentage
                         let maxDiscountValue = cartTotal * (this.pointsMaxRedeemPercent / 100);
                         // Convert max discount to points (Rp 100 = 1 point)
                         this.maxRedeemAllowed = Math.floor(maxDiscountValue / 100);
-                        
+
                         // Auto-fill logic
                         let availablePoints = this.selectedCustomer?.points_balance || 0;
-                        
+
                         if (availablePoints >= this.maxRedeemAllowed) {
                             this.redeemAmount = this.maxRedeemAllowed;
                         } else {
                             this.redeemAmount = availablePoints;
                         }
-                        
+
                         this.calculateRedeemDiscount();
                     },
 
@@ -1127,6 +1358,7 @@
                     // Data
                     toasts: [],
                     searchQuery: '',
+                    searchQty: 1,
                     // Return Session
                     showReturnModal: false,
                     returnSearchInvoice: '',
@@ -1206,11 +1438,11 @@
                         this.isProcessingReturn = true;
                         this.returnError = '';
                         this.returnSuccess = '';
-                        
+
                         try {
                             const response = await fetch(`/pos/transactions/search-invoice?invoice_number=${encodeURIComponent(this.returnSearchInvoice)}`);
                             const data = await response.json();
-                            
+
                             if (data.success) {
                                 // Initialize return_qty to 0
                                 data.transaction.items = data.transaction.items.map(i => ({
@@ -1247,7 +1479,7 @@
 
                         this.isProcessingReturn = true;
                         this.returnError = '';
-                        
+
                         try {
                             const payload = {
                                 admin_pin: this.adminPin,
@@ -1269,14 +1501,14 @@
                                 },
                                 body: JSON.stringify(payload)
                             });
-                            
+
                             const data = await res.json();
-                            
+
                             if (data.success) {
                                 this.returnSuccess = data.message;
                                 this.returnTransaction = null; // Hide the form on success
                                 this.adminPin = '';
-                                
+
                                 setTimeout(() => {
                                     this.closeReturnModal();
                                     // optional: reload page or emit event
@@ -1323,13 +1555,13 @@
                     },
 
                     formatClosingCash(e) {
-                         let val = e.target.value.replace(/\D/g, '');
-                         this.closingCashValue = val;
-                         if (!val) {
-                             this.closingCashDisplay = '';
-                             return;
-                         }
-                         this.closingCashDisplay = new Intl.NumberFormat('id-ID').format(val);
+                        let val = e.target.value.replace(/\D/g, '');
+                        this.closingCashValue = val;
+                        if (!val) {
+                            this.closingCashDisplay = '';
+                            return;
+                        }
+                        this.closingCashDisplay = new Intl.NumberFormat('id-ID').format(val);
                     },
 
                     verifyCloseRegister() {
@@ -1387,7 +1619,7 @@
                         if (this.cart.length === 0) {
                             try {
                                 localStorage.removeItem(this.storageKey);
-                            } catch (e) {}
+                            } catch (e) { }
                             return;
                         }
 
@@ -1420,7 +1652,7 @@
                                         this.cart = data.cart;
                                         console.log('Cart restored from localStorage:', this.cart.length, 'items');
                                     }
-                                    
+
                                     if (data.couponCode) {
                                         this.couponCode = data.couponCode;
                                     }
@@ -1447,19 +1679,19 @@
                     clearCartStorage() {
                         try {
                             localStorage.removeItem(this.storageKey);
-                            
+
                             // Reset Customer State
                             this.currentCustomer = null;
                             this.customerId = null;
                             this.pointsToRedeem = 0;
                             this.pointsDiscount = 0;
-                            
+
                             // Reset Coupon
                             this.couponCode = '';
-                            
+
                             // Dispatch event to clear customer component
                             this.$dispatch('clear-customer');
-                            
+
                         } catch (e) {
                             console.warn('Failed to clear cart from localStorage:', e);
                         }
@@ -1549,10 +1781,10 @@
                             if (!response.ok) return;
 
                             const data = await response.json();
-                            
+
                             this.promotionDiscount = parseFloat(data.discount_amount);
                             this.appliedPromotions = data.promotions;
-                            
+
                             // Map discounts back to cart items
                             if (data.items) {
                                 this.isUpdatingFromServer = true;
@@ -1563,8 +1795,8 @@
                                         let promoName = serverItem.promo_name || null;
 
                                         // Update discount info
-                                        return { 
-                                            ...localItem, 
+                                        return {
+                                            ...localItem,
                                             discount_amount: parseFloat(serverItem.discount_amount),
                                             promo_name: promoName,
                                             // Keep other local props
@@ -1572,7 +1804,7 @@
                                     }
                                     return { ...localItem, discount_amount: 0 };
                                 });
-                                
+
                                 // Reset flag after Alpine processes the update
                                 this.$nextTick(() => {
                                     this.isUpdatingFromServer = false;
@@ -1601,6 +1833,12 @@
                         this.saveCartToStorage();
                     },
                     handleSearchEnter() {
+                        // If search is empty, focus qty input
+                        if (!this.searchQuery.trim()) {
+                            this.$refs.qtyInput.focus();
+                            this.$refs.qtyInput.select();
+                            return;
+                        }
                         // Jika ada autocomplete dan ada item terpilih, pilih item tersebut
                         if (this.autocompleteResults.length > 0 && this.autocompleteIndex >= 0) {
                             this.selectProductFromAutocomplete(this.autocompleteIndex);
@@ -1720,21 +1958,23 @@
 
                         if (existing) {
                             // Skip stock check for service products
-                            if (productType === 'service' || existing.qty < stock) {
-                                existing.qty++;
+                            const addQty = parseInt(this.searchQty) || 1;
+                            if (productType === 'service' || (existing.qty + addQty) <= stock) {
+                                existing.qty += addQty;
                                 existing.subtotal = Math.round(existing.qty * existing.price);
                             } else {
                                 this.searchError = 'Stok tidak mencukupi';
                             }
                         } else {
+                            const initialQty = parseInt(this.searchQty) || 1;
                             this.cart.push({
                                 id: product.id,
                                 sku: product.sku,
                                 name: product.name,
                                 product_type: productType,
                                 price: price,
-                                qty: 1,
-                                subtotal: price,
+                                qty: initialQty,
+                                subtotal: price * initialQty,
                                 stock: stock,
                                 unit: baseUnit,
                                 available_units: availableUnits,
@@ -1742,6 +1982,7 @@
                                 showStockError: false // For tooltip
                             });
                         }
+                        this.searchQty = 1; // Reset qty input
                         this.$refs.searchInput.focus();
                     },
 
@@ -1974,24 +2215,24 @@
 
                             this.lastInvoice = data.invoice_number;
                             this.lastTransactionId = data.transaction_id;
-                            
+
                             // Reset State
                             this.cart = [];
                             this.clearCartStorage();
-                            
+
                             this.closePaymentModal();
                             this.showSuccessModal = true;
 
                             // Auto-focus print receipt button (and auto-print for ESC/POS)
-                            this.$nextTick(() => {
+                            setTimeout(() => {
                                 if (this.printerSettings.type === 'escpos') {
                                     this.printReceipt(data.print_payload);
                                 }
-                                
+
                                 if (this.$refs.printReceiptBtn) {
                                     this.$refs.printReceiptBtn.focus();
                                 }
-                            });
+                            }, 150);
 
                         } catch (error) {
                             console.error('Checkout error:', error);
@@ -2010,7 +2251,7 @@
                         try {
                             if (this.printerSettings.type === 'escpos') {
                                 console.log('Mencetak via Print Server (ESC/POS)...');
-                                
+
                                 // Jika tidak ada payload (misal di-klik tombol Reprint), fetch dari server.
                                 if (!payload && this.lastTransactionId) {
                                     const res = await fetch(`/pos/transactions/${this.lastTransactionId}/print-payload`);
@@ -2050,15 +2291,15 @@
                         this.amountPaid = 0;
                         this.paymentMethod = 'cash';
                         this.showSuccessModal = false;
-                        
+
                         // Form Resets
                         this.searchQuery = '';
                         this.couponCode = '';
                         this.promotionDiscount = 0;
                         this.appliedPromotions = [];
-                        
+
                         // Complete Storage Clear and Broadcast
-                        this.clearCartStorage(); 
+                        this.clearCartStorage();
                         window.dispatchEvent(new CustomEvent('clear-customer'));
 
                         // Recalculate
@@ -2143,24 +2384,24 @@
                     // --- Hold Transactions Logic ---
                     holdTransaction() {
                         if (this.cart.length === 0) return;
-                        
+
                         // Close other modals if any
                         this.showPaymentModal = false;
-                        
+
                         // Setup default name and show modal
                         this.holdNameInput = this.customerName || `Hold ${new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`;
                         this.showHoldPromptModal = true;
-                        
+
                         this.$nextTick(() => {
-                            if(this.$refs.holdNameInputField) {
+                            if (this.$refs.holdNameInputField) {
                                 this.$refs.holdNameInputField.select();
                             }
                         });
                     },
-                    
+
                     confirmHoldTransaction() {
                         if (!this.showHoldPromptModal) return;
-                        
+
                         const holdName = this.holdNameInput.trim() || `Hold ${new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`;
 
                         const newHold = {
@@ -2199,7 +2440,7 @@
                             this.cart = holdData.cart;
 
                             if (holdData.full_customer_data) {
-                                window.dispatchEvent(new CustomEvent('restore-full-state', { 
+                                window.dispatchEvent(new CustomEvent('restore-full-state', {
                                     detail: {
                                         customer: holdData.full_customer_data,
                                         pointsToRedeem: holdData.points_to_redeem || 0,
