@@ -15,6 +15,8 @@ class Promotion extends Model
         'description',
         'type', // percentage, fixed_amount, buy_x_get_y, bundle
         'value',
+        'buy_qty',
+        'get_qty',
         'min_purchase',
         'start_date',
         'end_date',
@@ -24,6 +26,8 @@ class Promotion extends Model
 
     protected $casts = [
         'value' => 'decimal:2',
+        'buy_qty' => 'integer',
+        'get_qty' => 'integer',
         'min_purchase' => 'decimal:2',
         'start_date' => 'datetime',
         'end_date' => 'datetime',

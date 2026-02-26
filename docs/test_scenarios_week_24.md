@@ -12,7 +12,7 @@ Skenario ini memastikan perhitungan otomatis dan manual tidak saling tindih atau
 - [x] **Skenario B (Tukar Poin + Promo)**
   - **Langkah:** Masukkan produk yang sedang promo ke keranjang. Pilih pelanggan terdaftar. Lakukan *Redeem/Tukar* semua poin pelanggan tersebut hingga nilainya menutupi (atau nyaris menutupi) seluruh tagihan.
   - **Ekspektasi:** Sistem tidak boleh *crash*. Kolom "Change/Kembalian" harus menunjukkan angka yang wajar (tidak minus secara tidak logis). Total pembayaran sesuai dengan sisa tagihan dikurangi poin.
-- [ ] **Skenario C (Buy X Get Y)**
+- [x] **Skenario C (Buy X Get Y)**
   - **Langkah:** Siapkan promo beli 2 gratis 1 untuk produk A. Masukkan 1 qty produk A ke keranjang.
   - **Ekspektasi:** Harga normal.
   - **Langkah Lanjutan:** Ubah kuantitas produk A menjadi 2.
