@@ -24,10 +24,10 @@ Skenario ini memastikan perhitungan otomatis dan manual tidak saling tindih atau
 
 Skenario ini memastikan riwayat modal awal, penjualan, dan penutupan sinkron dan wajib dilakukan.
 
-- [ ] **Skenario A (Akses Tanpa Shift Aktif)**
+- [x] **Skenario A (Akses Tanpa Shift Aktif)**
   - **Langkah:** Buka *browser incognito* (atau logout lalu login kembali). Login sebagai Kasir (yang belum membuka shift). Coba akses halaman POS (Poin Penjualan).
   - **Ekspektasi:** Sistem SEHARUSNYA mencegat akses tersebut dengan modal peringatan yang mewajibkan kasir memasukkan "Modal Awal" (Buka Kasir) sebelum bisa melakukan scan atau input barang apapun.
-- [ ] **Skenario B (Sisa Uang Fisik Tidak Sesuai)**
+- [x] **Skenario B (Sisa Uang Fisik Tidak Sesuai)**
   - **Langkah:** Mulai sesi shift baru dengan modal awal (misal Rp 100.000). Lakukan 1-2 transaksi penjualan (misal senilai total Rp 50.000 secara Tunai).
   - **Ekspektasi Sistem:** Laci kasir seharusnya memiliki Rp 150.000.
   - **Langkah Lanjutan:** Lakukan *Close Register* (Tutup Shift). Pada isian "Physical Cash", masukkan angka Rp 130.000 (sengaja kurang Rp 20.000).
