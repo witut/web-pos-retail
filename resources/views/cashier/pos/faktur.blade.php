@@ -285,8 +285,57 @@
                 Hormat Kami
             </td>
         </tr>
-    </t
-able>
+    </table>
+
+    <div class="no-print" style="text-align: center; margin-top: 30px;">
+        <button id="btnPrint" style="padding:10px 30px;font-size:14px;cursor:pointer;background:#1e293b;color:white;border:none;border-radius:5px;">Cetak Faktur</button>
+        <button onclick="window.close()" style="padding:10px 30px;font-size:14px;cursor:pointer;background:#e5e7eb;color:#374151;border:none;border-radius:5px;margin-left:10px;">Tutup</button>
+    </div>
+
+    <script>
+        const printerSettings = @json($printerSettings ?? ['type' => 'browser']);
+        const transactionId = {{ $transaction->id }};
+        const printBtn = document.getElementById('btnPrint');
+
+        async function executePrint() {
+            printBtn.disabled = true;
+            printBtn.innerText = 'Mencetak...';
+
+            try {
+                if (printerSettings.type === 'escpos') {
+                    const res = await fetch(`/pos/transactions/${transactionId}/print-payload`);
+                    const data = await res.json();
+                    if (data.success) {
+                        const printRes = await fetch(printerSettings.server_url + '/print', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(data.data)
+                        });
+                        if (!printRes.ok) throw new Error("Print Server tidak merespon.");
+                        setTimeout(() => window.close(), 1000);
+                    } else {
+                        throw new Error("Gagal mengambil data faktur");
+                    }
+                } else {
+                    window.print();
+                }
+            } catch (e) {
+                console.error("Print Error:", e);
+                alert("Gagal mencetak faktur: " + e.message);
+            } finally {
+                printBtn.disabled = false;
+                printBtn.innerText = 'Cetak Faktur';
+            }
+        }
+
+        printBtn.addEventListener('click', executePrint);
+
+        window.onload = function () {
+            if (printerSettings.type === 'escpos') {
+                executePrint();
+            }
+        }
+    </script>
 
 </body>
 </html>

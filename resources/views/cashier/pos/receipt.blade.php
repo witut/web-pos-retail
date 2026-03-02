@@ -13,11 +13,11 @@
 
         body {
             font-family: 'Courier New', Courier, monospace;
-            font-size: 12px;
+            font-size: 11px;
             width:
                 {{ \App\Models\Setting::get('printer.paper_width', '80') }}
                 mm;
-            padding: 10px;
+            padding: 5px;
             background: white;
             margin: 0 auto;
             /* Center receipt */
@@ -107,7 +107,7 @@
         }
 
         .totals .grand-total {
-            font-size: 14px;
+            font-size: 12px;
             border-top: 1px dashed #000;
             padding-top: 5px;
         }
@@ -329,7 +329,7 @@
 
     <!-- Print Button (no-print) -->
     <div class="no-print" style="text-align: center; margin-top: 20px;">
-        <button onclick="window.print()"
+        <button id="btnPrint"
             style="padding: 10px 30px; font-size: 14px; cursor: pointer; background: #1e293b; color: white; border: none; border-radius: 5px;">
             Cetak Struk
         </button>
@@ -340,10 +340,59 @@
     </div>
 
     <script>
+        const printerSettings = @json($printerSettings ?? ['type' => 'browser']);
+        const transactionId = {{ $transaction->id }};
+        const printBtn = document.getElementById('btnPrint');
+
+        async function executePrint() {
+            printBtn.disabled = true;
+            printBtn.innerText = 'Mencetak...';
+
+            try {
+                if (printerSettings.type === 'escpos') {
+                    // Fetch payload
+                    const res = await fetch(`/pos/transactions/${transactionId}/print-payload`);
+                    const data = await res.json();
+
+                    if (data.success) {
+                        // Send to print server
+                        const printRes = await fetch(printerSettings.server_url + '/print', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(data.data)
+                        });
+
+                        if (!printRes.ok) throw new Error("Print Server tidak merespon.");
+
+                        // Close window after successful ESC/POS print
+                        setTimeout(() => window.close(), 1000);
+                    } else {
+                        throw new Error("Gagal mengambil data struk");
+                    }
+                } else {
+                    // Default Browser Print
+                    window.print();
+                }
+            } catch (e) {
+                console.error("Print Error:", e);
+                alert("Gagal mencetak struk: " + e.message);
+            } finally {
+                printBtn.disabled = false;
+                printBtn.innerText = 'Cetak Struk';
+            }
+        }
+
+        printBtn.addEventListener('click', executePrint);
+
         // Auto print
         window.onload = function () {
-            // Uncomment the line below to auto-print
-            // window.print();
+            // Auto print on load (handled securely without window.print immediately)
+            if (printerSettings.type === 'escpos') {
+                executePrint();
+            } else {
+                // Uncomment the line below to auto-print browser dialog
+                // window.print();
+            }
         }
     </script>
 </body>

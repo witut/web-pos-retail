@@ -454,11 +454,16 @@ class POSController extends Controller
 
         $paperWidth = Setting::get('printer.paper_width', '80');
 
+        $printerSettings = [
+            'type' => Setting::get('printer.type', 'browser'),
+            'server_url' => Setting::get('printer.server_url', 'http://localhost:9100'),
+        ];
+
         if ($paperWidth === 'faktur') {
-            return view('cashier.pos.faktur', compact('transaction', 'storeName', 'storeAddress', 'storePhone', 'receiptFooter', 'taxType'));
+            return view('cashier.pos.faktur', compact('transaction', 'storeName', 'storeAddress', 'storePhone', 'receiptFooter', 'taxType', 'printerSettings'));
         }
 
-        return view('cashier.pos.receipt', compact('transaction', 'storeName', 'storeAddress', 'storePhone', 'receiptFooter', 'taxType'));
+        return view('cashier.pos.receipt', compact('transaction', 'storeName', 'storeAddress', 'storePhone', 'receiptFooter', 'taxType', 'printerSettings'));
     }
 
     /**
