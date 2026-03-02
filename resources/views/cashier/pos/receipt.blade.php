@@ -350,25 +350,24 @@
 
             try {
                 if (printerSettings.type === 'escpos') {
-                    // Fetch payload
-                    const res = await fetch(`/pos/transactions/${transactionId}/print-payload`);
-                    const data = await res.json();
+                    // Send to Laravel Proxy
+                    const printRes = await fetch(`/pos/transactions/${transactionId}/print-proxy`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').content : ''
+                        },
+                        body: JSON.stringify({}) // Additional data if needed
+                    });
 
-                    if (data.success) {
-                        // Send to print server
-                        const printRes = await fetch(printerSettings.server_url + '/print', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(data.data)
-                        });
+                    const printData = await printRes.json();
 
-                        if (!printRes.ok) throw new Error("Print Server tidak merespon.");
-
-                        // Close window after successful ESC/POS print
-                        setTimeout(() => window.close(), 1000);
-                    } else {
-                        throw new Error("Gagal mengambil data struk");
+                    if (!printRes.ok || !printData.success) {
+                        throw new Error(printData.error || "Print Server tidak merespon.");
                     }
+
+                    // Close window after successful ESC/POS print
+                    setTimeout(() => window.close(), 1000);
                 } else {
                     // Default Browser Print
                     window.print();

@@ -183,6 +183,7 @@ Route::middleware(['auth', 'role:cashier,admin'])->group(function () {
 
             // Print API
             Route::get('/transactions/{transaction}/print-payload', [\App\Http\Controllers\Api\PrinterController::class, 'getPayload'])->name('transactions.print-payload');
+            Route::post('/transactions/{transaction}/print-proxy', [\App\Http\Controllers\Api\PrinterController::class, 'printProxy'])->name('transactions.print-proxy');
         });
 
 

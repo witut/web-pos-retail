@@ -303,19 +303,21 @@
 
             try {
                 if (printerSettings.type === 'escpos') {
-                    const res = await fetch(`/pos/transactions/${transactionId}/print-payload`);
-                    const data = await res.json();
-                    if (data.success) {
-                        const printRes = await fetch(printerSettings.server_url + '/print', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(data.data)
-                        });
-                        if (!printRes.ok) throw new Error("Print Server tidak merespon.");
-                        setTimeout(() => window.close(), 1000);
-                    } else {
-                        throw new Error("Gagal mengambil data faktur");
+                    const printRes = await fetch(`/pos/transactions/${transactionId}/print-proxy`, {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').content : ''
+                        },
+                        body: JSON.stringify({}) // Additional data if needed
+                    });
+
+                    const printData = await printRes.json();
+
+                    if (!printRes.ok || !printData.success) {
+                        throw new Error(printData.error || "Print Server tidak merespon.");
                     }
+                    setTimeout(() => window.close(), 1000);
                 } else {
                     window.print();
                 }

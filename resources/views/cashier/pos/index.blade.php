@@ -991,7 +991,7 @@
                                         <th class="px-4 py-3">Produk</th>
                                         <th class="px-4 py-3 text-right">Harga Nett</th>
                                         <th class="px-4 py-3 text-center">Bisa Diretur</th>
-                                        <th class="px-4 py-3 text-center w-36">Qty Retur</th>
+                                        <th class="px-4 py-3 text-center w-48">Qty Retur</th>
                                         <th class="px-4 py-3 text-left w-56">Kondisi Barang</th>
                                     </tr>
                                 </thead>
@@ -1012,16 +1012,16 @@
                                                     x-text="item.max_qty"></span>
                                             </td>
                                             <td class="px-4 py-3">
-                                                <div class="flex items-center">
+                                                <div class="flex items-center justify-center w-32 mx-auto">
                                                     <button type="button"
                                                         @click="if(item.return_qty > 0) item.return_qty--"
-                                                        class="px-2 py-1 bg-gray-100 border border-gray-300 rounded-l hover:bg-gray-200">-</button>
+                                                        class="px-3 py-1 bg-gray-100 border border-gray-300 rounded-l hover:bg-gray-200">-</button>
                                                     <input type="number" x-model.number="item.return_qty" min="0"
                                                         :max="item.max_qty"
-                                                        class="w-full px-2 py-1 border-y border-gray-300 text-center focus:ring-orange-500 focus:border-orange-500 appearance-none m-0">
+                                                        class="w-16 px-2 py-1 border-y border-gray-300 text-center focus:ring-orange-500 focus:border-orange-500 appearance-none m-0">
                                                     <button type="button"
                                                         @click="if(item.return_qty < item.max_qty) item.return_qty++"
-                                                        class="px-2 py-1 bg-gray-100 border border-gray-300 rounded-r hover:bg-gray-200">+</button>
+                                                        class="px-3 py-1 bg-gray-100 border border-gray-300 rounded-r hover:bg-gray-200">+</button>
                                                 </div>
                                             </td>
                                             <td class="px-4 py-3 text-left">
@@ -2252,28 +2252,22 @@
                             if (this.printerSettings.type === 'escpos') {
                                 console.log('Mencetak via Print Server (ESC/POS)...');
 
-                                // Jika tidak ada payload (misal di-klik tombol Reprint), fetch dari server.
-                                if (!payload && this.lastTransactionId) {
-                                    const res = await fetch(`/pos/transactions/${this.lastTransactionId}/print-payload`);
-                                    const d = await res.json();
-                                    if (d.success) {
-                                        payload = d.data;
-                                    } else {
-                                        throw new Error("Gagal mengambil data struk");
-                                    }
-                                }
+                                // Send to Laravel Proxy
+                                const printRes = await fetch(`/pos/transactions/${this.lastTransactionId}/print-proxy`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').content : ''
+                                    },
+                                    body: JSON.stringify(payload || {})
+                                });
 
-                                if (payload) {
-                                    const printRes = await fetch(this.printerSettings.server_url + '/print', {
-                                        method: 'POST',
-                                        headers: {
-                                            'Content-Type': 'application/json'
-                                        },
-                                        body: JSON.stringify(payload)
-                                    });
-                                    if (!printRes.ok) throw new Error("Print Server tidak merespon (Pastikan Print Server berjalan di " + this.printerSettings.server_url + ")");
-                                    console.log("Struk berhasil dikirim ke Print Server");
+                                const printData = await printRes.json();
+
+                                if (!printRes.ok || !printData.success) {
+                                    throw new Error(printData.error || "Print Server tidak merespon.");
                                 }
+                                console.log("Struk berhasil dikirim melalui Print Proxy Server");
                             } else {
                                 // Default Browser Print (window.print)
                                 if (this.lastTransactionId) {
