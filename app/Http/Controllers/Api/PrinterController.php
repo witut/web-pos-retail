@@ -49,9 +49,15 @@ class PrinterController extends Controller
                 ]);
             }
 
+            $errorMessage = 'Print Server merespon dengan error: ' . $response->status();
+            $responseData = $response->json();
+            if (isset($responseData['error'])) {
+                $errorMessage = 'Print Server: ' . $responseData['error'];
+            }
+
             return response()->json([
                 'success' => false,
-                'error' => 'Print Server merespon dengan error: ' . $response->status()
+                'error' => $errorMessage
             ], 500);
 
         } catch (\Exception $e) {
