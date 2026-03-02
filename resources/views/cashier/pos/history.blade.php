@@ -130,6 +130,7 @@
                                                     </svg>
                                                 </a>
                                                 <a href="{{ route('pos.transaction.print', $trx) }}" target="_blank"
+                                                    onclick="return handlePrintClick(event, {{ $trx->id }});"
                                                     class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
                                                     title="Cetak">
                                                     <svg class="w-5 h-5" fill="none" stroke="currentColor"
@@ -338,6 +339,44 @@
                         }
                     }
                 }
+            }
+        </script>
+        
+        <script>
+            const posPrinterType = '{{ \App\Models\Setting::get("printer.type", "browser") }}';
+            
+            async function handlePrintClick(e, transactionId) {
+                if (posPrinterType === 'escpos') {
+                    e.preventDefault();
+                    const btn = e.currentTarget;
+                    if (btn.classList.contains('printing')) return false;
+                    
+                    btn.classList.add('printing');
+                    const originalTitle = btn.title;
+                    btn.title = 'Mencetak...';
+                    
+                    try {
+                        const res = await fetch(`/pos/transactions/${transactionId}/print-proxy`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').content : ''
+                            }
+                        });
+                        const data = await res.json();
+                        
+                        if (!res.ok || !data.success) {
+                            throw new Error(data.error || 'Server tidak merespon');
+                        }
+                    } catch (err) {
+                        alert('Gagal mencetak struk: ' + err.message);
+                    } finally {
+                        btn.classList.remove('printing');
+                        btn.title = originalTitle;
+                    }
+                    return false;
+                }
+                return true; // Biarkan default (buka tab baru) jika browser
             }
         </script>
     @endpush

@@ -143,10 +143,14 @@ class ShiftService
             ->where('payment_method', 'cash')
             ->whereBetween('transaction_date', [$session->opened_at, now()]) // transaction_date is datetime
             ->completed() // Scope from Transaction model
-            ->sum('amount_paid');
+            ->sum('total');
 
-        // Calculate Returns (if implemented later) or Cash Out
-        $cashOut = 0; // Placeholder
+        // Calculate Returns (Refunds taken from the drawer)
+        $cashOut = \App\Models\ProductReturn::where('user_id', $session->user_id)
+            ->where('refund_method', 'cash')
+            ->where('status', 'completed')
+            ->whereBetween('created_at', [$session->opened_at, now()]) // created_at exists since it extends Model
+            ->sum('refund_amount');
 
         $expectedCash = $session->opening_cash + $cashSales - $cashOut;
 

@@ -18,6 +18,7 @@
                         </a>
                     @endif
                     <a href="{{ route('pos.transaction.print', $transaction) }}" target="_blank"
+                        onclick="return handlePrintClick(event, {{ $transaction->id }})"
                         class="inline-flex items-center px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-900">
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -180,4 +181,45 @@
             </div>
         </div>
     </div>
+    </div>
+
+    @push('scripts')
+    <script>
+        const posPrinterType = '{{ \App\Models\Setting::get("printer.type", "browser") }}';
+        
+        async function handlePrintClick(e, transactionId) {
+            if (posPrinterType === 'escpos') {
+                e.preventDefault();
+                const btn = e.currentTarget;
+                if (btn.classList.contains('printing')) return false;
+                
+                btn.classList.add('printing');
+                const originalHtml = btn.innerHTML;
+                btn.innerHTML = 'Mencetak...';
+                
+                try {
+                    const res = await fetch(`/pos/transactions/${transactionId}/print-proxy`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').content : ''
+                        }
+                    });
+                    const data = await res.json();
+                    
+                    if (!res.ok || !data.success) {
+                        throw new Error(data.error || 'Server tidak merespon');
+                    }
+                } catch (err) {
+                    alert('Gagal mencetak struk: ' + err.message);
+                } finally {
+                    btn.classList.remove('printing');
+                    btn.innerHTML = originalHtml;
+                }
+                return false;
+            }
+            return true;
+        }
+    </script>
+    @endpush
 </x-layouts.pos>
