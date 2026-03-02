@@ -60,7 +60,7 @@
 - [ ] **Testing**:
     - [ ] Test Promotion calculation edge cases
     - [x] Test Shift open/close variances
-    - [ ] Test Return stock updates
+    - [x] Test Return stock updates
 - [ ] **Documentation**:
     - [ ] Update `README.md`
     - [ ] Create `UserManual.md` for cashiers

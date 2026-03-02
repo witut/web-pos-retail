@@ -37,12 +37,12 @@ Skenario ini memastikan riwayat modal awal, penjualan, dan penutupan sinkron dan
 
 Skenario ini krusial untuk memastikan uang kembali dan ketersediaan stok fisik tetap sinkron.
 
-- [ ] **Skenario A (Retur Barang Berkondisi Bagus)**
+- [x] **Skenario A (Retur Barang Berkondisi Bagus)**
   - **Langkah:** Cari data transaksi yang sudah berstatus *Completed*. Lakukan proses "Retur" untuk 1 buah barang (misalkan Sabun) dengan mencentang alasan "Salah beli" dan memilih kondisi barang "Bagus/Good".
   - **Ekspektasi:** Proses refund sukses tercatat. Di halaman *Laporan Stok / Produk*, stok produk Sabun tersebut HARUS bertambah kembali 1 pcs ke etalase.
-- [ ] **Skenario B (Retur Barang Kondisi Rusak/Damaged)**
+- [x] **Skenario B (Retur Barang Kondisi Rusak/Damaged)**
   - **Langkah:** Lakukan retur untuk 1 barang lagi dari transaksi yang sama (atau beda), namun kali ini pilih kondisi "Rusak/Damaged".
   - **Ekspektasi:** Sistem menyetujui *refund* uang kepada pelanggan, TETAPI stok barang tersebut tetap TIDAK bertambah di daftar stok etalase (karena otomatis terbaca sebagai *Dead Stock* atau langsung di-*write-off*).
-- [ ] **Skenario C (Proses Void Keseluruhan)**
+- [x] **Skenario C (Proses Void Keseluruhan)**
   - **Langkah:** Buat 1 transaksi penjualan baru secara utuh hingga tahap cetak struk. Kemudian dari menu Riwayat, pilih transaksi tersebut dan perintahkan aksi "Void". (Masukkan PIN Anda sebagai otoritas Admin).
   - **Ekspektasi:** Transaksi berubah status menjadi *Void*. Uang pembelian dianggap batal, dan yang terpenting: *Semua* kuantitas barang yang ada di struk tersebut kembali utuh 100% ke dalam total stok produk toko.
