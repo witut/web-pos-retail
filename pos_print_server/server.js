@@ -13,7 +13,7 @@ const port = 9100;
 // PENGATURAN PRINTER (Sistem Operasi)
 // ==========================================
 // Ganti nama ini dengan nama printer Anda di CUPS (Linux) atau Share Name (Windows)
-const PRINTER_NAME = 'xantri-58';
+const PRINTER_NAME = 'POS58 Printer(2)';
 
 // Membuat Custom Adapter untuk Sistem Operasi (CUPS Linux / Windows Spooler)
 // Alih-alih menulis ke raw USB Port (yang butuh permission khusus/Zadig),
@@ -36,10 +36,10 @@ class OsPrinterAdapter {
 
         let command = '';
         if (os.platform() === 'win32') {
-            // Untuk Windows Production: Mengirim file RAW ke shared printer lokal
-            // Pastikan printer sudah di-share dengan nama PRINTER_NAME
-            // Atau Anda bisa menggunakan aplikasi seperti RawBT / PrintSend
-            command = `print /D:"\\\\%COMPUTERNAME%\\${this.printerName}" "${tempPath}"`;
+            // Untuk Windows: gunakan PowerShell helper yang mengirim byte RAW langsung ke printer
+            // Tidak perlu melakukan printer sharing; printerName harus sesuai dengan nama printer di Windows
+            const psScript = path.join(__dirname, 'send_raw_to_printer.ps1');
+            command = `powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "${psScript}" -PrinterName "${this.printerName}" -FilePath "${tempPath}"`;
         } else {
             // Untuk Linux Development (CUPS):
             command = `lp -d "${this.printerName}" -o raw "${tempPath}"`;

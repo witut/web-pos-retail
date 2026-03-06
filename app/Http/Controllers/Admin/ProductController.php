@@ -3,14 +3,13 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Product;
 use App\Models\Category;
+use App\Models\Product;
 use App\Models\ProductBarcode;
 use App\Models\ProductUnit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 class ProductController extends Controller
 {
@@ -22,10 +21,10 @@ class ProductController extends Controller
         $query = Product::with(['category', 'barcodes'])
             ->when($request->search, function ($q) use ($request) {
                 $q->where(function ($query) use ($request) {
-                    $query->where('name', 'like', '%' . $request->search . '%')
-                        ->orWhere('sku', 'like', '%' . $request->search . '%')
+                    $query->where('name', 'like', '%'.$request->search.'%')
+                        ->orWhere('sku', 'like', '%'.$request->search.'%')
                         ->orWhereHas('barcodes', function ($q) use ($request) {
-                            $q->where('barcode', 'like', '%' . $request->search . '%');
+                            $q->where('barcode', 'like', '%'.$request->search.'%');
                         });
                 });
             })
@@ -49,6 +48,7 @@ class ProductController extends Controller
     public function create()
     {
         $categories = Category::all();
+
         return view('admin.products.create', compact('categories'));
     }
 
@@ -60,7 +60,7 @@ class ProductController extends Controller
         // dd($request->barcodes);
         $validated = $request->validate([
             'name' => 'required|string|max:200',
-            'sku' => 'nullable|string|max:20|unique:products,sku',
+            'sku' => 'nullable|string|max:100|unique:products,sku',
             'product_type' => 'required|in:inventory,service',
             'category_id' => 'required|exists:categories,id',
             'brand' => 'nullable|string|max:100',
@@ -131,7 +131,8 @@ class ProductController extends Controller
                 ->with('success', 'Produk berhasil ditambahkan');
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->withInput()->withErrors(['error' => 'Gagal menyimpan produk: ' . $e->getMessage()]);
+
+            return back()->withInput()->withErrors(['error' => 'Gagal menyimpan produk: '.$e->getMessage()]);
         }
     }
 
@@ -171,7 +172,7 @@ class ProductController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:200',
-            'sku' => 'required|string|max:20|unique:products,sku,' . $product->id,
+            'sku' => 'required|string|max:100|unique:products,sku,'.$product->id,
             'product_type' => 'required|in:inventory,service',
             'category_id' => 'required|exists:categories,id',
             'brand' => 'nullable|string|max:100',
@@ -237,7 +238,8 @@ class ProductController extends Controller
                 ->with('success', 'Produk berhasil diupdate');
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->withInput()->withErrors(['error' => 'Gagal mengupdate produk: ' . $e->getMessage()]);
+
+            return back()->withInput()->withErrors(['error' => 'Gagal mengupdate produk: '.$e->getMessage()]);
         }
     }
 
@@ -253,7 +255,7 @@ class ProductController extends Controller
             return redirect()->route('admin.products.index')
                 ->with('success', 'Produk berhasil dinonaktifkan');
         } catch (\Exception $e) {
-            return back()->withErrors(['error' => 'Gagal menghapus produk: ' . $e->getMessage()]);
+            return back()->withErrors(['error' => 'Gagal menghapus produk: '.$e->getMessage()]);
         }
     }
 
@@ -266,7 +268,7 @@ class ProductController extends Controller
         $prefix = strtoupper(substr($category->name ?? 'PROD', 0, 3));
 
         // Get last product with this prefix
-        $lastProduct = Product::where('sku', 'like', $prefix . '%')
+        $lastProduct = Product::where('sku', 'like', $prefix.'%')
             ->orderBy('sku', 'desc')
             ->first();
 
@@ -277,6 +279,6 @@ class ProductController extends Controller
             $newNumber = 1;
         }
 
-        return $prefix . '-' . str_pad($newNumber, 5, '0', STR_PAD_LEFT);
+        return $prefix.'-'.str_pad($newNumber, 5, '0', STR_PAD_LEFT);
     }
 }

@@ -8,7 +8,7 @@ class DatabaseSeeder extends Seeder
 {
     /**
      * Seed the application's database.
-     * 
+     *
      * Order penting:
      * 1. Users (untuk created_by foreign key)
      * 2. Settings (untuk konfigurasi sistem)
@@ -26,9 +26,9 @@ class DatabaseSeeder extends Seeder
         $this->call([
             UserSeeder::class,
             SettingSeeder::class,
-            CategorySeeder::class,
-            SupplierSeeder::class,
-            ProductSeeder::class,
+            // CategorySeeder::class,
+            // SupplierSeeder::class,
+            // ProductSeeder::class,
         ]);
 
         echo "\n";

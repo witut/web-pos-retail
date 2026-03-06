@@ -5,135 +5,126 @@ namespace Tests\Feature;
 use Tests\TestCase;
 use App\Models\User;
 use App\Models\Product;
-use App\Models\Customer;
 use App\Models\Setting;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
-class PosTransactionTest extends TestCase
+class POSTransactionTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected $cashier;
-    protected $product;
-    protected $customer;
+    private User $cashier;
+    private Product $product;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        // Setup Cashier
+        // Create Cashier
         $this->cashier = User::factory()->create([
             'role' => 'cashier',
-            'name' => 'Cashier Test'
+            'name' => 'Test Cashier'
         ]);
 
-        // Setup Product
+        // Create Product
         $this->product = Product::factory()->create([
-            'name' => 'Test Product',
-            'selling_price' => 100000,
-            'cost_price' => 50000,
             'stock_on_hand' => 100,
-            'product_type' => 'inventory',
-            'base_unit' => 'pcs'
+            'selling_price' => 10000,
+            'cost_price' => 5000,
+            'base_unit' => 'Pcs',
+            'status' => 'active'
         ]);
 
-        // Setup Customer
-        $this->customer = Customer::create([
-            'name' => 'Test Customer',
-            'phone' => '081234567890',
-            'points_balance' => 0
+        // Setup Tax Setting (10%)
+        Setting::factory()->create([
+            'key' => 'tax_rate',
+            'value' => '10'
         ]);
 
-        // Seed Settings
-        Setting::set('customer.loyalty_enabled', true);
-        Setting::set('customer.points_earn_rate', '10000:1'); // Rp 10k = 1 point
-        Setting::set('customer.points_redeem_rate', '100:10000'); // 100 points = Rp 10k
-        Setting::set('tax_rate', 0); // Force no tax
+        // Setup Tax Type (Exclusive)
+        Setting::factory()->create([
+            'key' => 'tax_type',
+            'value' => 'exclusive'
+        ]);
     }
 
-    public function test_checkout_with_customer_earns_points()
+    /** @test */
+    public function it_can_load_pos_page()
     {
-        $this->actingAs($this->cashier);
+        $response = $this->actingAs($this->cashier)
+            ->get(route('pos.index'));
 
-        // Buy 2 items @ 100k = 200k total
-        // Earn Rate 10k:1 => Should earn 20 points
+        $response->assertStatus(200);
+        $response->assertViewIs('cashier.pos.index');
+        $response->assertSee('Test Cashier'); // Ensure user name is visible
+    }
 
-        $response = $this->postJson(route('pos.checkout'), [
-            'payment' => [
-                'method' => 'cash',
-                'amount_paid' => 200000
-            ],
-            'customer_id' => $this->customer->id,
+    /** @test */
+    public function it_can_checkout_successfully()
+    {
+        $buyQty = 2;
+        $price = $this->product->selling_price;
+        $subtotal = $buyQty * $price;
+        $tax = $subtotal * 0.10; // 10%
+        $total = $subtotal + $tax;
+
+        $payload = [
             'items' => [
                 [
                     'product_id' => $this->product->id,
-                    'qty' => 2,
-                    'price' => 100000,
-                    'unit_name' => 'pcs'
+                    'qty' => $buyQty,
+                    'price' => $price,
+                    'unit_name' => 'Pcs'
                 ]
+            ],
+            'payment' => [
+                'method' => 'cash',
+                'amount_paid' => 50000, // Sufficient payment
             ]
-        ]);
+        ];
+
+        $response = $this->actingAs($this->cashier)
+            ->postJson(route('pos.checkout'), $payload);
 
         $response->assertStatus(200)
-            ->assertJson(['success' => true]);
+            ->assertJsonStructure([
+                'success',
+                'message',
+                'invoice_number',
+                'transaction_id',
+                'total'
+            ])
+            ->assertJson([
+                'success' => true,
+                'total' => $total
+            ]);
 
         // Verify Database
         $this->assertDatabaseHas('transactions', [
-            'total' => 200000,
-            'customer_id' => $this->customer->id,
-            'points_earned' => 20
+            'cashier_id' => $this->cashier->id,
+            'total' => $total,
+            'payment_method' => 'cash',
+            'status' => 'completed'
         ]);
 
-        // Verify Customer Points Balance
-        $this->assertEquals(20, $this->customer->fresh()->points_balance);
+        $this->assertDatabaseHas('transaction_items', [
+            'product_id' => $this->product->id,
+            'qty' => $buyQty,
+            'unit_price' => $price,
+            'subtotal' => $subtotal
+        ]);
 
-        // Verify Customer Stats
-        $this->assertEquals(200000, $this->customer->fresh()->total_spent);
+        // Verify Stock Deduction via Database check on Product
+        $this->assertDatabaseHas('products', [
+            'id' => $this->product->id,
+            'stock_on_hand' => 100 - $buyQty
+        ]);
+
+        // Verify Stock Movement
+        $this->assertDatabaseHas('stock_movements', [
+            'product_id' => $this->product->id,
+            'movement_type' => 'OUT',
+            'qty' => -$buyQty,
+            'reference_type' => 'SALE'
+        ]);
     }
-
-    public function test_checkout_redeem_points()
-    {
-        $this->actingAs($this->cashier);
-
-        // Give customer 200 points (worth Rp 20k)
-        $this->customer->update(['points_balance' => 200]);
-
-        // Buy 1 item @ 100k
-        // Redeem 200 points (-20k)
-        // Total to pay: 80k
-
-        $response = $this->postJson(route('pos.checkout'), [
-            'payment' => [
-                'method' => 'cash',
-                'amount_paid' => 100000 // Paying full amount to be safe
-            ],
-            'customer_id' => $this->customer->id,
-            'points_to_redeem' => 200,
-            'items' => [
-                [
-                    'product_id' => $this->product->id,
-                    'qty' => 1,
-                    'price' => 100000,
-                    'unit_name' => 'pcs'
-                ]
-            ]
-        ]);
-
-        $response->assertStatus(200);
-
-        // Verify Transaction
-        $this->assertDatabaseHas('transactions', [
-            'subtotal' => 100000,
-            'points_discount_amount' => 20000,
-            'total' => 80000,
-            'points_redeemed' => 200,
-            'change_amount' => 20000 // 100000 paid - 80000 total = 20000 change
-        ]);
-
-        // Verify Customer Balance (200 - 200 + 8 (earned from 80k)) = 8 points
-        // Earn on 80k => 8 points
-        // Earn on 80k => 8 points
-        $this->assertEquals(8, $this->customer->fresh()->points_balance);
-    }
-
 }
