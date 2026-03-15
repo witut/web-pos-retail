@@ -114,14 +114,14 @@ class POSController extends Controller
             ->whereHas('barcodes', function ($q) use ($query) {
                 $q->where('barcode', $query);
             })
-            ->with(['barcodes', 'units', 'category'])
+            ->with(['barcodes', 'activeUnits', 'category'])
             ->first();
 
         // If not found, search by SKU
         if (!$product) {
             $product = Product::active()
                 ->where('sku', $query)
-                ->with(['barcodes', 'units', 'category'])
+                ->with(['barcodes', 'activeUnits', 'category'])
                 ->first();
         }
 
@@ -181,7 +181,7 @@ class POSController extends Controller
 
         $products = Product::active()
             ->search($query)
-            ->with('category')
+            ->with(['category', 'activeUnits'])
             ->limit(10)
             ->get()
             ->map(function ($product) {
@@ -483,6 +483,7 @@ class POSController extends Controller
             ]);
 
             // Find admin with valid PIN - check all admins
+            /** @var \Illuminate\Database\Eloquent\Collection|\App\Models\User[] $admins */
             $admins = User::admins()->active()->get();
             $validAdmin = null;
 
@@ -539,6 +540,7 @@ class POSController extends Controller
             'pin' => 'required|string|digits:6'
         ]);
 
+        /** @var \Illuminate\Database\Eloquent\Collection|\App\Models\User[] $admins */
         $admins = User::admins()->active()->get();
 
         foreach ($admins as $admin) {

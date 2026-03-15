@@ -27,19 +27,35 @@ class InventoryAnalysisService
             ->distinct()
             ->pluck('product_id');
 
-        // Return active products NOT sold, with stock > 0
-        return Product::active()
+        $products = Product::active()
             ->whereNotIn('id', $soldProductIds)
             ->where('stock_on_hand', '>', 0)
             ->with('category')
             ->orderByDesc('stock_on_hand')
-            ->get()
-            ->map(function ($product) use ($days) {
-                $product->days_since_last_sale = $this->getDaysSinceLastSale($product->id);
-                $product->analysis_type = 'dead_stock';
-                $product->analysis_reason = "No sales in last $days days";
-                return $product;
-            });
+            ->get();
+
+        if ($products->isEmpty()) {
+            return collect();
+        }
+
+        // Get last sale date for all found products efficiently in one query to avoid N+1
+        $productIds = $products->pluck('id')->toArray();
+        $lastSales = DB::table('transaction_items')
+            ->join('transactions', 'transaction_items.transaction_id', '=', 'transactions.id')
+            ->whereIn('product_id', $productIds)
+            ->where('transactions.status', 'completed')
+            ->select('product_id', DB::raw('MAX(transactions.transaction_date) as last_sale_date'))
+            ->groupBy('product_id')
+            ->pluck('last_sale_date', 'product_id');
+
+        return $products->map(function ($product) use ($days, $lastSales) {
+            $lastSaleDate = $lastSales[$product->id] ?? null;
+            $product->days_since_last_sale = $lastSaleDate ? Carbon::parse($lastSaleDate)->diffInDays(Carbon::now()) : -1;
+            
+            $product->analysis_type = 'dead_stock';
+            $product->analysis_reason = "No sales in last $days days";
+            return $product;
+        });
     }
 
     /**
@@ -96,6 +112,8 @@ class InventoryAnalysisService
             return -1; // Never sold
         }
 
+        // Helper no longer used via loop, handled by grouped query in getDeadStock
+        // Kept for backward compatibility if needed elsewhere
         return Carbon::parse($lastSale)->diffInDays(Carbon::now());
     }
 }

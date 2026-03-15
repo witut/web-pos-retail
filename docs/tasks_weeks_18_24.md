@@ -64,6 +64,6 @@
 - [ ] **Documentation**:
     - [x] Update `README.md`
     - [x] Create `UserManual.md` for cashiers
-- [ ] **Polish**:
-    - [ ] Fix UI glitches
-    - [ ] Optimize database queries
+- [x] **Polish**:
+    - [x] Fix UI glitches
+    - [x] Optimize database queries
