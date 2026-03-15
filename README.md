@@ -32,8 +32,25 @@ A modern, robust Point of Sale (POS) application tailored for retail businesses.
 
 ### 💰 Point of Sale (POS)
 - **Transactions**: Fast and secure checkout process.
+- **Hold & Resume**: Bypasses tedious reloading by using LocalStorage to hold and resume carts.
 - **Void Tracking**: Strict control over voided transactions with reasons and admin approval tracking.
-- **User Roles**: distinct access for Admins and Cashiers (with PIN support).
+- **Returns & Refunds**: Fully integrated item return system with stock auto-adjustment and cash/non-cash refund control.
+- **User Roles**: Distinct access for Admins and Cashiers (with PIN support).
+
+### 🏷️ Promotions & Discounts
+- **Flexible Rules**: Support for Percentage (%), Fixed Amount, and Buy X Get Y discounts.
+- **Coupons**: Generate and track unique coupon codes.
+- **Auto-Apply**: Automatically applies valid active promotions to qualifying cart items.
+- **Deadstock Intelligence**: Integrated with reporting to quickly create promos for slow-moving stock.
+
+### 🕒 Shift & Cash Management
+- **Cash Register Sessions**: Enforces opening a shift with initial cash balances before processing sales.
+- **Cash Movements**: Track petty cash and external movements during an active shift.
+- **Z-Reports**: Detailed Daily Sales Summary generated upon closing the register.
+
+### 🖨️ Direct Printing System
+- **ESC/POS Support**: Silent, background printing directly to USB Thermal Printers (58mm/80mm).
+- **Cross-Platform**: Uses an OS adapter wrapper (`lp` for CUPS on Linux, `send_raw_to_printer.ps1` for Windows Spooler) to bypass browser restrictions.
 
 ### 🛡️ Security & Auditing
 - **Audit Logs**: Track critical actions across the system.

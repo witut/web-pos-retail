@@ -58,7 +58,7 @@
 
 ## Week 24: Testing, Documentation & Polish
 - [ ] **Testing**:
-    - [ ] Test Promotion calculation edge cases
+    - [x] Test Promotion calculation edge cases
     - [x] Test Shift open/close variances
     - [x] Test Return stock updates
 - [ ] **Documentation**:
