@@ -62,8 +62,8 @@
     - [x] Test Shift open/close variances
     - [x] Test Return stock updates
 - [ ] **Documentation**:
-    - [ ] Update `README.md`
-    - [ ] Create `UserManual.md` for cashiers
+    - [x] Update `README.md`
+    - [x] Create `UserManual.md` for cashiers
 - [ ] **Polish**:
     - [ ] Fix UI glitches
     - [ ] Optimize database queries
