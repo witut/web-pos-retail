@@ -2223,12 +2223,9 @@
                             this.closePaymentModal();
                             this.showSuccessModal = true;
 
-                            // Auto-focus print receipt button (and auto-print for ESC/POS)
+                            // Auto-focus print receipt button
+                            // Tidak langsung cetak otomatis sesuai permintaan user
                             setTimeout(() => {
-                                if (this.printerSettings.type === 'escpos') {
-                                    this.printReceipt(data.print_payload);
-                                }
-
                                 if (this.$refs.printReceiptBtn) {
                                     this.$refs.printReceiptBtn.focus();
                                 }
