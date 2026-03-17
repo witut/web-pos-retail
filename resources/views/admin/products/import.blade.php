@@ -25,7 +25,24 @@
 
         @if (session('warning'))
             <div class="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <p class="text-yellow-800 font-medium">{{ session('warning') }}</p>
+                <p class="text-yellow-800 font-medium">⚠️ {{ session('warning') }}</p>
+
+                {{-- Download Error File --}}
+                @if (session('has_error_file') || \Illuminate\Support\Facades\Session::has('error_file_path'))
+                    <div class="mt-3">
+                        <a href="{{ route('admin.products.import.download-errors') }}"
+                            class="inline-flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            Download File Error (.xlsx)
+                        </a>
+                        <p class="text-xs text-yellow-700 mt-1">
+                            File berisi baris-baris yang gagal beserta keterangan errornya. Perbaiki lalu import ulang.
+                        </p>
+                    </div>
+                @endif
 
                 @if (session('import_errors'))
                     <div class="mt-4">
@@ -63,24 +80,35 @@
             </div>
         @endif
 
+
         <!-- Instructions Card -->
         <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
             <h3 class="text-lg font-semibold text-blue-900 mb-3">📋 Petunjuk Import</h3>
             <ol class="list-decimal list-inside space-y-2 text-blue-800">
                 <li>Download template Excel dengan klik tombol "Download Template" di bawah</li>
-                <li>Isi data produk sesuai kolom yang tersedia</li>
-                <li>Kolom wajib: <strong>SKU, Nama Produk, Harga Jual</strong></li>
+                <li>Isi data produk sesuai kolom yang tersedia (<strong>14 kolom</strong>)</li>
+                <li>Kolom wajib: <strong>SKU, Nama Produk, Harga Jual, Unit Dasar</strong></li>
                 <li>Product Type: <strong>inventory</strong> (barang fisik) atau <strong>service</strong> (jasa)</li>
-                <li>Jika SKU sudah ada, data akan di-<strong>update</strong></li>
+                <li>Kolom <strong>Konversi</strong>: isi <strong>1</strong> untuk unit dasar (PCS), isi angka lebih besar untuk unit besar (RTG=10, BOX=24, dll)</li>
+                <li>Untuk menambahkan <strong>multi-unit (UOM)</strong>: tambahkan baris baru dengan SKU yang sama, isi Konversi dan Unit yang berbeda</li>
                 <li>Kategori akan dibuat otomatis jika belum ada</li>
                 <li>Upload file yang sudah diisi</li>
             </ol>
 
-            <div class="mt-4 p-3 bg-blue-100 rounded-lg">
-                <p class="text-sm text-blue-900">
-                    <strong>💡 Tips:</strong> Untuk produk <strong>service</strong>, kolom Stok Awal dan Min Stock Alert
-                    bisa dikosongkan.
-                </p>
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div class="p-3 bg-blue-100 rounded-lg">
+                    <p class="text-sm text-blue-900">
+                        <strong>📦 Contoh Multi-Unit:</strong><br>
+                        Baris 1: SKU=PROD-001 | Konversi=<strong>1</strong> | Unit=<strong>PCS</strong> | Harga=2.000<br>
+                        Baris 2: SKU=PROD-001 | Konversi=<strong>10</strong> | Unit=<strong>RTG</strong> | Harga=19.000
+                    </p>
+                </div>
+                <div class="p-3 bg-amber-100 rounded-lg">
+                    <p class="text-sm text-amber-900">
+                        <strong>⚠️ Hasil Summary:</strong><br>
+                        "Produk baru", "Diupdate", <strong>"Unit ditambahkan"</strong>, dan "Gagal" akan dilaporkan setelah import selesai.
+                    </p>
+                </div>
             </div>
         </div>
 
@@ -134,14 +162,16 @@
 
         <!-- Info Card -->
         <div class="bg-gray-50 border border-gray-200 rounded-lg p-6">
-            <h3 class="text-lg font-semibold text-gray-800 mb-3">ℹ️ Informasi Tambahan</h3>
+            <h3 class="text-lg font-semibold text-gray-800 mb-3">ℹ️ Aturan Import</h3>
             <ul class="space-y-2 text-gray-700">
                 <li>• Harga Jual harus lebih besar atau sama dengan Harga Pokok</li>
-                <li>• Produk dengan SKU yang sama akan di-update, bukan dibuat duplikat</li>
+                <li>• Baris dengan SKU yang sama + Konversi & Unit identik → <strong>dilaporkan sebagai duplikat</strong> (dilewati)</li>
+                <li>• Baris dengan SKU yang sama + Konversi atau Unit berbeda → <strong>ditambahkan sebagai UOM baru</strong></li>
+                <li>• Konflik (misal: nama unit sama tapi konversi beda) → <strong>dilaporkan sebagai error konflik</strong>, harus edit manual</li>
                 <li>• Baris yang error akan di-skip, baris valid tetap diimport</li>
-                <li>• Barcode akan ditambahkan ke produk (jika diisi)</li>
+                <li>• Barcode akan ditambahkan ke produk (jika diisi dan belum ada)</li>
                 <li>• Status default: <strong>active</strong></li>
-                <li>• Unit Dasar default: <strong>PCS</strong></li>
+                <li>• Konversi default: <strong>1</strong> (satu unit dasar)</li>
             </ul>
         </div>
     </div>

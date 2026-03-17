@@ -153,14 +153,17 @@ class ProductController extends Controller
             ];
         })->values();
 
-        $unitsData = $product->units->map(function ($u) {
-            return [
-                'id' => $u->id,
-                'name' => $u->unit_name,
-                'conversion_rate' => $u->conversion_rate,
-                'selling_price' => $u->selling_price,
-            ];
-        })->values();
+        $unitsData = $product->units
+            ->where('is_base_unit', false)   // Satuan dasar TIDAK ditampilkan di UOM — sudah ada di "Satuan Dasar"
+            ->map(function ($u) {
+                return [
+                    'id'              => $u->id,
+                    'name'            => $u->unit_name,
+                    'conversion_rate' => $u->conversion_rate,
+                    'selling_price'   => $u->selling_price,
+                ];
+            })->values();
+
 
         return view('admin.products.edit', compact('product', 'categories', 'barcodesData', 'unitsData'));
     }
@@ -244,19 +247,102 @@ class ProductController extends Controller
     }
 
     /**
-     * Remove the specified product (soft delete by setting inactive)
+     * Remove the specified product.
+     *
+     * Produk HANYA bisa dihapus permanen dari database apabila tidak terkait
+     * dengan tabel transaksi, pergerakan stok, penerimaan, opname, atau retur.
+     * Jika sudah terkait → produk dinonaktifkan (status=inactive) saja.
+     *
+     * Tabel yang CASCADE (ikut terhapus): product_barcodes, product_units, promotion_products.
+     * Tabel yang RESTRICT (mencegah hapus): transaction_items, stock_movements,
+     *   stock_receiving_items, stock_opname_items, product_return_items.
      */
     public function destroy(Product $product)
     {
-        try {
-            // Don't actually delete, just set to inactive
+        // ── Cek relasi yang mencegah hard-delete ─────────────────────────────
+        $hasTransactions     = $product->transactionItems()->exists();
+        $hasStockMovements   = $product->stockMovements()->exists();
+        $hasReceivingItems   = $product->stockReceivingItems()->exists();
+        $hasOpnameItems      = $product->stockOpnameItems()->exists();
+        $hasReturnItems      = $product->returnItems()->exists();
+
+        $hasRelatedData = $hasTransactions || $hasStockMovements
+                       || $hasReceivingItems || $hasOpnameItems
+                       || $hasReturnItems;
+
+        if ($hasRelatedData) {
+            // Tidak bisa dihapus → nonaktifkan saja
             $product->update(['status' => 'inactive']);
 
+            $reasons = [];
+            if ($hasTransactions)   $reasons[] = 'transaksi penjualan';
+            if ($hasStockMovements) $reasons[] = 'pergerakan stok';
+            if ($hasReceivingItems) $reasons[] = 'penerimaan barang';
+            if ($hasOpnameItems)    $reasons[] = 'stock opname';
+            if ($hasReturnItems)    $reasons[] = 'retur barang';
+
             return redirect()->route('admin.products.index')
-                ->with('success', 'Produk berhasil dinonaktifkan');
-        } catch (\Exception $e) {
-            return back()->withErrors(['error' => 'Gagal menghapus produk: '.$e->getMessage()]);
+                ->with('warning',
+                    "Produk \"{$product->name}\" tidak dapat dihapus karena terkait dengan: "
+                    . implode(', ', $reasons)
+                    . ". Produk telah dinonaktifkan."
+                );
         }
+
+        // ── Tidak ada relasi → hard delete ───────────────────────────────────
+        try {
+            DB::beginTransaction();
+            // product_barcodes & product_units will CASCADE automatically.
+            // promotion_products uses nullOnDelete for reward_product_id.
+            $product->delete();
+            DB::commit();
+
+            return redirect()->route('admin.products.index')
+                ->with('success', "Produk \"{$product->name}\" berhasil dihapus permanen dari database.");
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['error' => 'Gagal menghapus produk: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Print label barcode untuk satu produk
+     */
+    public function showPrintLabel(Product $product)
+    {
+        $product->load(['barcodes', 'units']);
+        $products = collect([$product]);
+        $quantities = [$product->id => 1];
+
+        return view('admin.products.print_labels', compact('products', 'quantities'));
+    }
+
+    /**
+     * Print label barcode untuk banyak produk (bulk)
+     * POST: product_ids[] + quantities[product_id]
+     */
+    public function printLabels(Request $request)
+    {
+        $request->validate([
+            'product_ids'   => 'required|array|min:1',
+            'product_ids.*' => 'exists:products,id',
+            'quantities'    => 'nullable|array',
+        ]);
+
+        $products = Product::with(['barcodes', 'units'])
+            ->whereIn('id', $request->product_ids)
+            ->get();
+
+        // quantities: [product_id => qty], default 1
+        $quantities = [];
+        foreach ($products as $p) {
+            $quantities[$p->id] = (int) ($request->input("quantities.{$p->id}", 1));
+            if ($quantities[$p->id] < 1) $quantities[$p->id] = 1;
+            if ($quantities[$p->id] > 100) $quantities[$p->id] = 100;
+        }
+
+        return view('admin.products.print_labels', compact('products', 'quantities'));
     }
 
     /**

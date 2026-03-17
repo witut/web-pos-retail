@@ -1,11 +1,44 @@
 <x-layouts.admin :title="'Daftar Produk'">
+<div x-data="bulkSelect()">
+
+    {{-- Flash Messages --}}
+    @if(session('success'))
+        <div class="mb-4 bg-green-50 border border-green-200 rounded-lg px-4 py-3 flex items-start gap-3">
+            <svg class="w-5 h-5 text-green-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <p class="text-green-800 text-sm">{{ session('success') }}</p>
+        </div>
+    @endif
+
+    @if(session('warning'))
+        <div class="mb-4 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 flex items-start gap-3">
+            <svg class="w-5 h-5 text-amber-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+            <p class="text-amber-800 text-sm">{{ session('warning') }}</p>
+        </div>
+    @endif
+
     <!-- Header -->
+
     <div class="flex items-center justify-between mb-6">
         <div>
             <h2 class="text-2xl font-bold text-gray-800">Daftar Produk</h2>
             <p class="text-gray-500">Kelola semua produk di toko Anda</p>
         </div>
         <div class="flex items-center space-x-3">
+            <!-- Bulk Print Label Button (shown when items selected) -->
+            <div x-show="selected.length > 0" x-transition style="display:none;">
+                <button @click="submitBulkPrint()"
+                    class="inline-flex items-center px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-lg transition-colors shadow-sm">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
+                    Print Label (<span x-text="selected.length"></span>)
+                </button>
+            </div>
             <!-- Export Button -->
             <a href="{{ route('admin.products.export') }}"
                 class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors shadow-sm">
@@ -83,6 +116,9 @@
         <table class="w-full">
             <thead class="bg-gray-50">
                 <tr>
+                    <th class="px-4 py-3 text-center w-10">
+                        <input type="checkbox" @change="toggleAll($event)" class="rounded" title="Pilih semua">
+                    </th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produk
                     </th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kategori
@@ -100,7 +136,13 @@
             </thead>
             <tbody class="divide-y divide-gray-100">
                 @forelse($products ?? [] as $product)
-                    <tr class="hover:bg-gray-50">
+                    <tr class="hover:bg-gray-50" :class="{ 'bg-amber-50': selected.includes({{ $product->id }}) }">
+                        <td class="px-4 py-4 text-center">
+                            <input type="checkbox"
+                                   :value="{{ $product->id }}"
+                                   x-model="selected"
+                                   class="rounded">
+                        </td>
                         <td class="px-6 py-4">
                             <div class="flex items-center">
                                 @if($product->image_path)
@@ -146,6 +188,15 @@
                         </td>
                         <td class="px-6 py-4 text-center">
                             <div class="flex items-center justify-center space-x-2">
+                                {{-- Print Label per baris --}}
+                                <a href="{{ route('admin.products.print-label', $product) }}"
+                                    class="p-2 text-amber-600 hover:bg-amber-50 rounded-lg" title="Print Label Barcode"
+                                    target="_blank">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                    </svg>
+                                </a>
                                 <a href="{{ route('admin.products.edit', $product) }}"
                                     class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg" title="Edit">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -154,10 +205,10 @@
                                     </svg>
                                 </a>
                                 <form method="POST" action="{{ route('admin.products.destroy', $product) }}"
-                                    onsubmit="return confirmDelete(event)">
+                                    onsubmit="return confirmDelete(event, '{{ addslashes($product->name) }}')">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="p-2 text-red-600 hover:bg-red-50 rounded-lg" title="Hapus">
+                                    <button type="submit" class="p-2 text-red-600 hover:bg-red-50 rounded-lg" title="Hapus Produk">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                 d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -169,7 +220,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7" class="px-6 py-12 text-center text-gray-500">
+                        <td colspan="8" class="px-6 py-12 text-center text-gray-500">
                             <svg class="w-12 h-12 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor"
                                 viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -189,4 +240,53 @@
             </div>
         @endif
     </div>
+    </div>
+
+    {{-- Hidden bulk print form --}}
+    <form id="bulk-print-form" method="POST" action="{{ route('admin.products.print-labels') }}" target="_blank" style="display:none;">
+        @csrf
+        <div id="bulk-print-inputs"></div>
+    </form>
+
+</div>{{-- end bulkSelect --}}
+
+@push('scripts')
+<script>
+    function bulkSelect() {
+        return {
+            selected: [],
+            toggleAll(event) {
+                if (event.target.checked) {
+                    this.selected = @json($products->pluck('id'));
+                } else {
+                    this.selected = [];
+                }
+            },
+            submitBulkPrint() {
+                const form = document.getElementById('bulk-print-form');
+                const container = document.getElementById('bulk-print-inputs');
+                container.innerHTML = '';
+                this.selected.forEach(id => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'product_ids[]';
+                    input.value = id;
+                    container.appendChild(input);
+                });
+                form.submit();
+            }
+        };
+    }
+
+    function confirmDelete(event, productName) {
+        return confirm(
+            'Hapus produk "' + productName + '"?\n\n'
+            + '• Jika produk BELUM ada transaksi/stok → akan DIHAPUS PERMANEN dari database.\n'
+            + '• Jika produk SUDAH ada transaksi/stok → akan DINONAKTIFKAN saja.\n\n'
+            + 'Lanjutkan?'
+        );
+    }
+</script>
+@endpush
+
 </x-layouts.admin>

@@ -121,7 +121,12 @@ class Product extends Model
      */
     public function activeUnits()
     {
-        return $this->hasMany(ProductUnit::class)->where('is_active', true);
+        // Hanya unit TAMBAHAN (is_base_unit=false) yang dikembalikan.
+        // Satuan dasar (is_base_unit=true) sudah direpresentasikan oleh field base_unit produk
+        // dan ditambahkan secara manual di POS JS (addToCart).
+        return $this->hasMany(ProductUnit::class)
+            ->where('is_active', true)
+            ->where('is_base_unit', false);
     }
 
     /**
@@ -153,6 +158,36 @@ class Product extends Model
     public function transactionItems()
     {
         return $this->hasMany(TransactionItem::class);
+    }
+
+    /**
+     * Get semua stock receiving items (penerimaan barang)
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function stockReceivingItems()
+    {
+        return $this->hasMany(StockReceivingItem::class);
+    }
+
+    /**
+     * Get semua stock opname items
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function stockOpnameItems()
+    {
+        return $this->hasMany(StockOpnameItem::class);
+    }
+
+    /**
+     * Get semua product return items (retur barang)
+     * 
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function returnItems()
+    {
+        return $this->hasMany(ProductReturnItem::class);
     }
 
     /*

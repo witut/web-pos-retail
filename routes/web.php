@@ -36,12 +36,17 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     // Categories CRUD
     Route::resource('categories', CategoryController::class);
 
-    // Products Import/Export
+    // Products Import/Export + Label Print
     Route::prefix('products')->name('products.')->group(function () {
         Route::get('import', [ProductImportController::class, 'index'])->name('import');
         Route::post('import', [ProductImportController::class, 'import']);
         Route::get('export', [ProductImportController::class, 'export'])->name('export');
         Route::get('import/template', [ProductImportController::class, 'downloadTemplate'])->name('import.template');
+        Route::get('import/download-errors', [ProductImportController::class, 'downloadErrorFile'])->name('import.download-errors');
+
+        // Barcode Label Printing
+        Route::post('print-labels', [ProductController::class, 'printLabels'])->name('print-labels');
+        Route::get('{product}/print-label', [ProductController::class, 'showPrintLabel'])->name('print-label');
     });
 
     // Products CRUD
