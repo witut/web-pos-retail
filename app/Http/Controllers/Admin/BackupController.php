@@ -53,6 +53,22 @@ class BackupController extends Controller
     }
 
     /**
+     * Restore database from a backup file
+     */
+    public function restore(string $filename): RedirectResponse
+    {
+        $result = $this->backupService->restoreBackup($filename);
+
+        if ($result['success']) {
+            return redirect()->route('admin.backups.index')
+                ->with('success', $result['message']);
+        }
+
+        return redirect()->route('admin.backups.index')
+            ->with('error', $result['message']);
+    }
+
+    /**
      * Delete a backup file
      */
     public function destroy(string $filename): RedirectResponse

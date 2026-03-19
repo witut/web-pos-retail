@@ -100,6 +100,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
         Route::get('/', [\App\Http\Controllers\Admin\BackupController::class, 'index'])->name('index');
         Route::post('/', [\App\Http\Controllers\Admin\BackupController::class, 'store'])->name('store');
         Route::get('/{filename}/download', [\App\Http\Controllers\Admin\BackupController::class, 'download'])->name('download');
+        Route::post('/{filename}/restore', [\App\Http\Controllers\Admin\BackupController::class, 'restore'])->name('restore');
         Route::delete('/{filename}', [\App\Http\Controllers\Admin\BackupController::class, 'destroy'])->name('destroy');
     });
 

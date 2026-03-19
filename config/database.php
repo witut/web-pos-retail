@@ -61,7 +61,15 @@ return [
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 (PHP_VERSION_ID >= 80500 ? \Pdo\Mysql::ATTR_SSL_CA : \PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],
+            // Konfigurasi mysqldump untuk backup (spatie/laravel-backup)
+            // Isi DB_DUMP_BINARY_PATH di .env jika mysqldump tidak ada di PATH sistem
+            // Contoh Windows XAMPP : C:\xampp\mysql\bin\
+            // Contoh Windows Laragon: C:\laragon\bin\mysql\mysql-8.x.x-winx64\bin\
+            'dump' => [
+                'dump_binary_path' => env('DB_DUMP_BINARY_PATH', ''),
+            ],
         ],
+
 
         'mariadb' => [
             'driver' => 'mariadb',

@@ -63,6 +63,10 @@
                                             class="text-blue-600 hover:text-blue-800 text-sm font-medium">
                                             Download
                                         </a>
+                                        <button onclick="restoreBackup('{{ $backup['filename'] }}')"
+                                            class="text-amber-600 hover:text-amber-800 text-sm font-medium">
+                                            Restore
+                                        </button>
                                         <button onclick="deleteBackup('{{ $backup['filename'] }}')"
                                             class="text-red-600 hover:text-red-800 text-sm font-medium">
                                             Hapus
@@ -82,12 +86,11 @@
                             d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                     <div>
-                        <h4 class="text-sm font-medium text-blue-900">Tips Backup</h4>
+                        <h4 class="text-sm font-medium text-blue-900">Tips Backup & Restore</h4>
                         <p class="text-sm text-blue-700 mt-1">
-                            • Backup otomatis dapat dikonfigurasi di Pengaturan > Backup<br>
+                            • Backup otomatis dapat dikonfigurasi di Pengaturan › Backup<br>
                             • Download backup secara berkala ke storage external<br>
-                            • File backup dapat dipulihkan menggunakan command: <code
-                                class="bg-blue-100 px-2 py-1 rounded">php artisan backup:restore</code>
+                            • Tombol <strong>Restore</strong> akan menimpa database aktif — pastikan Anda yakin sebelum melanjutkan
                         </p>
                     </div>
                 </div>
@@ -112,6 +115,35 @@
                     const form = document.createElement('form');
                     form.method = 'POST';
                     form.action = '{{ route("admin.backups.store") }}';
+
+                    const csrfInput = document.createElement('input');
+                    csrfInput.type = 'hidden';
+                    csrfInput.name = '_token';
+                    csrfInput.value = '{{ csrf_token() }}';
+                    form.appendChild(csrfInput);
+
+                    document.body.appendChild(form);
+                    form.submit();
+                },
+                allowOutsideClick: () => !Swal.isLoading()
+            });
+        }
+
+        function restoreBackup(filename) {
+            Swal.fire({
+                title: '⚠️ Restore Database?',
+                html: 'File <strong>' + filename + '</strong> akan digunakan untuk <strong>menimpa database aktif</strong>.<br><br>Semua data yang ada saat ini akan digantikan oleh data dari backup ini.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d97706',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Ya, Restore Sekarang',
+                cancelButtonText: 'Batal',
+                showLoaderOnConfirm: true,
+                preConfirm: () => {
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = '{{ url("/admin/backups") }}/' + filename + '/restore';
 
                     const csrfInput = document.createElement('input');
                     csrfInput.type = 'hidden';
