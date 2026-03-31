@@ -123,17 +123,30 @@
                 </div>
                 <div class="my-3 border-t border-slate-800" :class="!sidebarOpen ? 'block' : 'hidden'"></div>
 
-                <a href="{{ route('admin.stock.receiving.index') }}"
+                <a href="{{ route('admin.purchases.index') }}"
                     class="flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all group whitespace-nowrap
-                          {{ request()->routeIs('admin.stock.*') ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white' }}"
-                    title="Stock">
+                          {{ request()->routeIs('admin.purchases.*') ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white' }}"
+                    title="Pembelian">
                     <svg class="w-5 h-5 flex-shrink-0 transition-colors" :class="sidebarOpen ? 'mr-3' : 'mr-0 mx-auto'"
                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                            d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                     </svg>
                     <span class="font-medium transition-opacity duration-300"
-                        :class="sidebarOpen ? 'opacity-100' : 'opacity-0 hidden'">Stock</span>
+                        :class="sidebarOpen ? 'opacity-100' : 'opacity-0 hidden'">Pembelian</span>
+                </a>
+
+                <a href="{{ route('admin.stock.movements.index') }}"
+                    class="flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all group whitespace-nowrap
+                          {{ request()->routeIs('admin.stock.movements.*') ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white' }}"
+                    title="Kartu Stok">
+                    <svg class="w-5 h-5 flex-shrink-0 transition-colors" :class="sidebarOpen ? 'mr-3' : 'mr-0 mx-auto'"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span class="font-medium transition-opacity duration-300"
+                        :class="sidebarOpen ? 'opacity-100' : 'opacity-0 hidden'">Kartu Stok</span>
                 </a>
 
                 <a href="{{ route('admin.stock.opname.index') }}"

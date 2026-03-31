@@ -42,11 +42,19 @@ class DashboardController extends Controller
         // 4. Low Stock Products
         $lowStockProducts = $this->reportService->getLowStockReport()->take(5);
 
+        // 5. Negative Stock Products
+        $negativeStockProducts = $this->reportService->getNegativeStockReport()->take(5);
+
+        // 6. Expiring Soon (Medicine/Bakery FEFO)
+        $expiringSoonProducts = $this->reportService->getExpiringSoonReport(30)->take(5);
+
         return view('admin.dashboard.index', compact(
             'stats',
             'salesTrend',
             'topProducts',
-            'lowStockProducts'
+            'lowStockProducts',
+            'negativeStockProducts',
+            'expiringSoonProducts'
         ));
     }
 }

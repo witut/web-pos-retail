@@ -140,6 +140,7 @@ class TransactionService
                     'discount_amount' => $item['discount_amount'] ?? 0,
                     'subtotal' => $item['subtotal'],
                     'cost_price' => $item['cost_price'], // HPP untuk profit calc
+                    'product_serial_id' => $item['serial_id'] ?? null, // Link specific serial if provided
                 ]);
 
                 // Deduct stock (create stock movement)
@@ -149,7 +150,9 @@ class TransactionService
                     $item['unit_name'],
                     'SALE',
                     $transaction->invoice_number,
-                    $cashierId
+                    $cashierId,
+                    null,
+                    ['serial_id' => $item['serial_id'] ?? null]
                 );
             }
 
@@ -537,6 +540,7 @@ class TransactionService
                 'discount_amount' => $discountAmount, // Total diskon untuk item ini
                 'subtotal' => ($unitPrice * $item['qty']) - $discountAmount, // Subtotal bersih (Net)
                 'cost_price' => $costPricePerUnit, // HPP per unit transaksi
+                'serial_id' => $item['serial_id'] ?? null,
             ];
         }
 

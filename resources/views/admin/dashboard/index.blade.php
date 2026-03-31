@@ -149,7 +149,7 @@
         <!-- Low Stock List -->
         <div class="lg:col-span-1 bg-white rounded-xl shadow-sm border border-gray-100">
             <div class="p-4 border-b border-gray-100 flex justify-between items-center">
-                <h3 class="font-semibold text-gray-800">Stok Menipis</h3>
+                <h3 class="font-semibold text-gray-800 text-sm">Stok Menipis</h3>
                 <a href="{{ route('admin.products.index', ['stock_status' => 'low']) }}"
                     class="text-xs text-blue-600 hover:text-blue-800">Lihat Semua</a>
             </div>
@@ -157,18 +157,115 @@
                 @forelse($lowStockProducts ?? [] as $product)
                     <div class="flex items-center justify-between p-3 bg-red-50 rounded-lg">
                         <div class="flex-1 min-w-0 mr-2">
-                            <p class="font-medium text-gray-800 truncate">{{ $product->name }}</p>
-                            <p class="text-xs text-gray-500">SKU: {{ $product->sku }}</p>
+                            <p class="text-xs font-medium text-gray-800 truncate">{{ $product->name }}</p>
+                            <p class="text-[10px] text-gray-500">SKU: {{ $product->sku }}</p>
                         </div>
                         <div class="text-right whitespace-nowrap">
-                            <p class="font-bold text-red-600">{{ $product->stock_on_hand }} {{ $product->base_unit }}</p>
+                            <p class="text-xs font-bold text-red-600">{{ $product->stock_on_hand }} {{ $product->base_unit }}</p>
                         </div>
                     </div>
                 @empty
-                    <div class="text-center py-6">
-                        <p class="text-gray-400 text-sm">Stok aman terkendali</p>
+                    <div class="text-center py-6 text-gray-400 text-xs italic">
+                        Stok aman terkendali
                     </div>
                 @endforelse
+            </div>
+        </div>
+    </div>
+
+    <!-- Inventory Alerts (Negative & Expiring) -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Negative Stock List -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100">
+            <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-orange-50 rounded-t-xl">
+                <div class="flex items-center space-x-2">
+                    <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <h3 class="font-bold text-orange-800 text-sm">Stok Minus (Perlu Penyesuaian)</h3>
+                </div>
+                <span class="px-2 py-0.5 bg-orange-100 text-orange-700 text-[10px] font-bold rounded-full">Kritis</span>
+            </div>
+            <div class="p-2">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs text-left">
+                        <thead class="text-gray-500 border-b">
+                            <tr>
+                                <th class="px-3 py-2 font-medium">Produk</th>
+                                <th class="px-3 py-2 text-right font-medium">Stok Saat Ini</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-50">
+                            @forelse($negativeStockProducts ?? [] as $product)
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-3 py-3">
+                                        <p class="font-medium text-gray-800">{{ $product->name }}</p>
+                                        <p class="text-[10px] text-gray-500">{{ $product->sku }}</p>
+                                    </td>
+                                    <td class="px-3 py-3 text-right">
+                                        <span class="text-red-600 font-bold font-mono">{{ $product->stock_on_hand }}</span>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="2" class="px-3 py-10 text-center text-gray-400 italic">
+                                        Tidak ada stok negatif (Bagus!)
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Expiring Soon List -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100">
+            <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-rose-50 rounded-t-xl">
+                <div class="flex items-center space-x-2">
+                    <svg class="w-5 h-5 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <h3 class="font-bold text-rose-800 text-sm">Barang Mendekati Kadaluwarsa (ED)</h3>
+                </div>
+                <span class="px-2 py-0.5 bg-rose-100 text-rose-700 text-[10px] font-bold rounded-full">30 Hari</span>
+            </div>
+            <div class="p-2">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs text-left">
+                        <thead class="text-gray-500 border-b">
+                            <tr>
+                                <th class="px-3 py-2 font-medium">Produk / Batch</th>
+                                <th class="px-3 py-2 font-medium">Tgl Expired</th>
+                                <th class="px-3 py-2 text-right font-medium">Stok</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-50">
+                            @forelse($expiringSoonProducts ?? [] as $item)
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-3 py-3">
+                                        <p class="font-medium text-gray-800">{{ $item->name }}</p>
+                                        <p class="text-[10px] text-gray-500">Batch: {{ $item->batch_number }}</p>
+                                    </td>
+                                    <td class="px-3 py-3">
+                                        <span class="px-1.5 py-0.5 bg-rose-100 text-rose-700 rounded font-medium text-[10px]">
+                                            {{ \Carbon\Carbon::parse($item->expiry_date)->format('d M Y') }}
+                                        </span>
+                                    </td>
+                                    <td class="px-3 py-3 text-right">
+                                        <span class="font-bold text-gray-700">{{ $item->current_quantity }}</span>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="3" class="px-3 py-10 text-center text-gray-400 italic">
+                                        Tidak ada barang mendekati kadaluwarsa
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>

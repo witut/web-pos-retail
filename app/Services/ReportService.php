@@ -338,6 +338,46 @@ class ReportService
     }
 
     /**
+     * Get negative stock report
+     * 
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    public function getNegativeStockReport()
+    {
+        return Product::active()
+            ->where('stock_on_hand', '<', 0)
+            ->with('category')
+            ->orderBy('stock_on_hand')
+            ->get();
+    }
+
+    /**
+     * Get products expiring soon (next 30 days)
+     * 
+     * @param int $days
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    public function getExpiringSoonReport(int $days = 30)
+    {
+        $expiryDate = Carbon::now()->addDays($days);
+
+        return DB::table('product_batches')
+            ->join('products', 'product_batches.product_id', '=', 'products.id')
+            ->where('product_batches.expiry_date', '<=', $expiryDate)
+            ->where('product_batches.current_quantity', '>', 0)
+            ->select(
+                'products.id as product_id',
+                'products.name',
+                'products.sku',
+                'product_batches.batch_number',
+                'product_batches.expiry_date',
+                'product_batches.current_quantity'
+            )
+            ->orderBy('product_batches.expiry_date')
+            ->get();
+    }
+
+    /**
      * Get dead stock report (Barang tidak laku dalam X hari)
      * 
      * @param int $days

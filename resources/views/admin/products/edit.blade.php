@@ -98,8 +98,40 @@
                                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                         </div>
 
-                        <!-- Status -->
+                        <!-- Tracking Type -->
                         <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Tipe Pelacakan <span class="text-red-500">*</span>
+                            </label>
+                            <select name="tracking_type" x-model="tracking_type" required
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <option value="default">Sederhana (Stok Biasa)</option>
+                                <option value="batch">Batch & Expired Date (Obat/Bakery)</option>
+                                <option value="serial">Serial Number (Elektronik)</option>
+                            </select>
+                            <p class="text-xs text-gray-500 mt-1">
+                                <span x-show="tracking_type === 'default'">Stok dihitung total tanpa nomor batch/seri.</span>
+                                <span x-show="tracking_type === 'batch'">Memungkinkan pelacakan nomor batch dan tanggal kadaluwarsa.</span>
+                                <span x-show="tracking_type === 'serial'">Tiap unit produk memiliki nomor seri unik.</span>
+                            </p>
+                        </div>
+
+                        <!-- Display Limit (Pull-out) -->
+                        <div x-show="tracking_type === 'batch'" x-cloak>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Batas Pajang (Hari)
+                            </label>
+                            <div class="relative">
+                                <input type="number" name="display_limit_days" value="{{ old('display_limit_days', $product->display_limit_days) }}"
+                                    min="0"
+                                    class="w-full px-4 py-2 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <span class="absolute right-3 top-2.5 text-gray-500 text-sm">Hari</span>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">Ditarik dari rak X hari sebelum kadaluwarsa (ED)</p>
+                        </div>
+
+                        <!-- Status -->
+                        <div :class="tracking_type !== 'batch' ? 'md:col-span-1' : ''">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
                             <select name="status"
                                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
@@ -443,6 +475,7 @@
                     selling_price: '{{ old('selling_price', $product->selling_price) }}',
                     cost_price: '{{ old('cost_price', $product->cost_price) }}',
                     margin_percent: 0,
+                    tracking_type: '{{ old('tracking_type', $product->tracking_type) }}',
 
                     init() {
                         // Calculate initial margin on load

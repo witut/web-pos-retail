@@ -135,6 +135,9 @@
                                     <span class="font-medium text-slate-700" x-text="formatCurrency(item.price)"></span>
                                     <span class="text-xs text-gray-500 ml-2">Stok: <span
                                             x-text="Math.floor(item.stock)"></span></span>
+                                    <template x-if="item.tracking_type === 'serial'">
+                                        <span class="ml-2 px-1 bg-purple-100 text-purple-700 text-[10px] font-bold rounded">SERIAL</span>
+                                    </template>
                                 </div>
                             </div>
                         </div>
@@ -172,11 +175,16 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100">
-                            <template x-for="(item, index) in cart" :key="item.id">
+                            <template x-for="(item, index) in cart" :key="item.serial_id ? 'sn-' + item.serial_id : 'prod-' + item.id">
                                 <tr class="cart-item" :class="{ 'bg-blue-50': selectedCartIndex === index }">
                                     <td class="px-4 py-3">
                                         <div class="font-medium text-gray-800" x-text="item.name"></div>
-                                        <div class="text-xs text-gray-500" x-text="item.sku"></div>
+                                        <div class="text-xs text-gray-500 flex items-center space-x-2">
+                                            <span x-text="item.sku"></span>
+                                            <template x-if="item.serial_number">
+                                                <span class="text-purple-600 font-mono font-bold" x-text="'[SN: ' + item.serial_number + ']'"></span>
+                                            </template>
+                                        </div>
 
                                         <!-- Promo Badge -->
                                         <div x-show="item.promo_name" class="mt-1" x-transition>
@@ -194,20 +202,31 @@
                                         </div>
 
                                         <!-- Unit Selector -->
-                                        <div x-show="item.available_units && item.available_units.length > 1"
-                                            class="mt-1">
-                                            <select x-model="item.unit" @change="changeUnit(index, $event.target.value)"
-                                                class="text-xs border-gray-300 rounded focus:ring-slate-500 focus:border-slate-500 py-1 pl-2 pr-6 bg-slate-50 text-slate-700">
-                                                <template x-for="unit in item.available_units" :key="unit.name">
-                                                    <option :value="unit.name" x-text="unit.name"
-                                                        :selected="unit.name === item.unit"></option>
-                                                </template>
-                                            </select>
-                                        </div>
-                                        <div x-show="!item.available_units || item.available_units.length <= 1"
-                                            class="text-xs text-gray-400 mt-1">
-                                            <span x-text="item.unit"></span>
-                                        </div>
+                                        <!-- D.2: For serial items, show locked unit; otherwise show selector -->
+                                        <template x-if="item.is_serial">
+                                            <div class="mt-1 flex items-center gap-1 text-xs text-purple-600 font-medium">
+                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                                <span x-text="item.unit"></span>
+                                            </div>
+                                        </template>
+                                        <template x-if="!item.is_serial">
+                                            <div>
+                                                <div x-show="item.available_units && item.available_units.length > 1"
+                                                    class="mt-1">
+                                                    <select x-model="item.unit" @change="changeUnit(index, $event.target.value)"
+                                                        class="text-xs border-gray-300 rounded focus:ring-slate-500 focus:border-slate-500 py-1 pl-2 pr-6 bg-slate-50 text-slate-700">
+                                                        <template x-for="unit in item.available_units" :key="unit.name">
+                                                            <option :value="unit.name" x-text="unit.name"
+                                                                :selected="unit.name === item.unit"></option>
+                                                        </template>
+                                                    </select>
+                                                </div>
+                                                <div x-show="!item.available_units || item.available_units.length <= 1"
+                                                    class="text-xs text-gray-400 mt-1">
+                                                    <span x-text="item.unit"></span>
+                                                </div>
+                                            </div>
+                                        </template>
                                     </td>
                                     <td class="px-4 py-3">
                                         <div class="flex items-center justify-center space-x-1 relative">
@@ -221,17 +240,28 @@
                                                 </div>
                                             </div>
 
-                                            <button @click="decrementQty(index)"
-                                                class="w-7 h-7 flex items-center justify-center bg-gray-200 hover:bg-gray-300 rounded text-gray-700">
-                                                -
-                                            </button>
-                                            <input type="number" x-model.number="item.qty" min="1"
-                                                @change="validateManualQty(index)"
-                                                class="w-12 text-center border border-gray-300 rounded py-1 text-sm">
-                                            <button @click="incrementQty(index)"
-                                                class="w-7 h-7 flex items-center justify-center bg-gray-200 hover:bg-gray-300 rounded text-gray-700">
-                                                +
-                                            </button>
+                                            <!-- D.1: For serial items, show locked qty=1 badge; otherwise show +/- controls -->
+                                            <template x-if="item.is_serial">
+                                                <div class="flex items-center gap-1 px-2 py-1 bg-purple-50 border border-purple-200 rounded-lg">
+                                                    <svg class="w-3.5 h-3.5 text-purple-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                                    <span class="text-sm font-bold text-purple-700">1</span>
+                                                </div>
+                                            </template>
+                                            <template x-if="!item.is_serial">
+                                                <div class="flex items-center space-x-1">
+                                                    <button @click="decrementQty(index)"
+                                                        class="w-7 h-7 flex items-center justify-center bg-gray-200 hover:bg-gray-300 rounded text-gray-700">
+                                                        -
+                                                    </button>
+                                                    <input type="number" x-model.number="item.qty" min="1"
+                                                        @change="validateManualQty(index)"
+                                                        class="w-12 text-center border border-gray-300 rounded py-1 text-sm">
+                                                    <button @click="incrementQty(index)"
+                                                        class="w-7 h-7 flex items-center justify-center bg-gray-200 hover:bg-gray-300 rounded text-gray-700">
+                                                        +
+                                                    </button>
+                                                </div>
+                                            </template>
                                         </div>
                                     </td>
                                     <td class="px-4 py-3 text-right text-sm">
@@ -575,31 +605,72 @@
         </div>
 
         <!-- Success Modal -->
-        <div x-show="showSuccessModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-8 text-center">
-                <div class="w-20 h-20 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
-                    <svg class="w-12 h-12 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                    </svg>
+        @include('cashier.pos._success_modal')
+
+        <!-- Serial Number Selection Modal -->
+        <div x-show="showSerialModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+            @keydown.escape.prevent="closeSerialModal()">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden"
+                @click.outside="closeSerialModal()">
+                <div class="px-6 py-4 bg-slate-800 text-white flex justify-between items-center">
+                    <div>
+                        <h3 class="text-xl font-bold">Pilih Nomor Seri (SN)</h3>
+                        <p class="text-xs text-slate-300" x-text="currentSerialProduct?.name"></p>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-xs text-slate-400 uppercase font-bold tracking-wider">Status Pemilihan</div>
+                        <div class="text-sm font-bold" :class="selectedSerials.length === requiredSerialsCount ? 'text-emerald-400' : 'text-amber-400'">
+                            <span x-text="selectedSerials.length"></span> / <span x-text="requiredSerialsCount"></span> Terpilih
+                        </div>
+                    </div>
                 </div>
-                <h3 class="text-2xl font-bold text-gray-800 mb-2">Pembayaran Berhasil!</h3>
-                <p class="text-gray-500 mb-6">Transaksi telah disimpan</p>
-                <p class="text-sm text-gray-600 mb-1">No. Invoice</p>
-                <p class="text-xl font-mono font-bold text-slate-700 mb-6" x-text="lastInvoice"></p>
-                <div class="space-y-3">
-                    <button @click="printReceipt()" x-ref="printReceiptBtn"
-                        @keydown.arrow-down.prevent="$refs.btnNewTransaction.focus()"
-                        @keydown.arrow-up.prevent="$refs.btnNewTransaction.focus()"
-                        @keydown.enter.prevent="printReceipt()"
-                        class="w-full py-3 bg-slate-800 text-white font-medium rounded-lg hover:bg-slate-900 transition-colors focus:ring-2 focus:ring-slate-400 focus:outline-none">
-                        Cetak Struk
+
+                <div class="p-6">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Scan atau Pilih SN yang tersedia</label>
+                        <div class="relative">
+                            <input type="text" x-model="snSearchQuery" placeholder="Cari atau scan barcode SN..."
+                                class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500">
+                            <svg class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                        </div>
+                    </div>
+
+                    <div class="max-h-60 overflow-y-auto border rounded-xl divide-y bg-gray-50">
+                        <template x-for="sn in filteredSerials" :key="sn.id">
+                            <div @click="selectSerial(sn)"
+                                :class="selectedSerials.find(s => s.id === sn.id) ? 'bg-slate-800 text-white' : 'hover:bg-white'"
+                                class="px-4 py-3 cursor-pointer transition-colors flex justify-between items-center text-sm">
+                                <span class="font-mono font-medium" x-text="sn.serial_number"></span>
+                                <span x-show="selectedSerials.find(s => s.id === sn.id)">
+                                    <svg class="w-5 h-5 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                    </svg>
+                                </span>
+                            </div>
+                        </template>
+                        <div x-show="filteredSerials.length === 0" class="p-8 text-center text-gray-500 italic text-sm">
+                            Tidak ada nomor seri tersedia yang cocok.
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 p-3 bg-blue-50 text-blue-700 text-xs rounded-lg border border-blue-100 flex items-start" x-show="requiredSerialsCount > 1">
+                        <svg class="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>Produk ini dalam satuan grosir. Silakan pilih <b x-text="requiredSerialsCount"></b> nomor seri untuk melanjutkan.</span>
+                    </div>
+                </div>
+
+                <div class="px-6 py-4 bg-gray-50 flex space-x-3">
+                    <button @click="closeSerialModal()"
+                        class="flex-1 py-3 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300">
+                        Batal
                     </button>
-                    <button x-ref="btnNewTransaction" @click="newTransaction()"
-                        @keydown.arrow-up.prevent="$refs.printReceiptBtn.focus()"
-                        @keydown.arrow-down.prevent="$refs.printReceiptBtn.focus()"
-                        @keydown.enter.prevent="newTransaction()"
-                        class="w-full py-3 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-colors focus:ring-2 focus:ring-emerald-400 focus:outline-none">
-                        Transaksi Baru
+                    <button @click="confirmSerialSelection()" :disabled="selectedSerials.length !== requiredSerialsCount"
+                        class="flex-1 py-3 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors">
+                        Tambahkan ke Keranjang
                     </button>
                 </div>
             </div>
@@ -1378,12 +1449,20 @@
                     taxRate: {{ $taxRate ?? 0 }},
                     taxType: '{{ $taxType ?? 'exclusive' }}',
                     printerSettings: @json($printerSettings ?? []),
+                    allowNegativeStock: {{ $allowNegativeStock ? 'true' : 'false' }},
                     amountPaid: 0,
                     paymentMethod: 'cash',
                     showPaymentModal: false,
                     paymentError: '',
                     showSuccessModal: false,
                     isProcessing: false,
+                    showSerialModal: false,
+                    currentSerialProduct: null,
+                    snSearchQuery: '',
+                    selectedSerials: [], // Array for multiple selection
+                    requiredSerialsCount: 0,
+                    availableSerials: [],
+                    searchQtyConversion: 1, // Store conversion of selected search result
                     lastInvoice: '',
                     lastTransactionId: null,
                     quickCashAmounts: [10000, 20000, 50000, 100000, 200000, 500000],
@@ -1885,6 +1964,11 @@
                                 return;
                             }
 
+                            // D.3: Bypass modal pilih SN jika produk ditembak langsung via Serial Number scanner
+                            if (data.product.matched_serial) {
+                                data.product.selected_serial = data.product.matched_serial;
+                            }
+
                             this.addToCart(data.product);
                             this.searchQuery = '';
                         } catch (error) {
@@ -1920,7 +2004,8 @@
                             selling_price: parseInt(item.price) || 0,
                             stock_on_hand: parseInt(item.stock) || 0,
                             base_unit: item.base_unit || 'pcs',
-                            units: item.units || []
+                            units: item.units || [],
+                            tracking_type: item.tracking_type || 'none'
                         });
                         this.searchQuery = '';
                         this.autocompleteResults = [];
@@ -1928,11 +2013,21 @@
                         this.$refs.searchInput.focus();
                     },
 
-                    addToCart(product) {
+                    addToCart(product, forceBypassMerge = false) {
                         const price = parseInt(product.selling_price) || 0;
                         const stock = parseInt(product.stock_on_hand) || 0;
                         const baseUnit = product.base_unit || 'pcs';
                         const productType = product.product_type || 'inventory';
+                        const trackingType = product.tracking_type || 'none';
+
+                        // If tracking is serial, open modal instead of adding directly
+                        // unless it's already defined (from modal confirmation)
+                        if (trackingType === 'serial' && !product.selected_serial) {
+                            // Store conversion if using unit from search (not implemented yet, but for safety)
+                            this.searchQtyConversion = product.conversion || 1;
+                            this.openSerialModal(product);
+                            return;
+                        }
 
                         // Prepare units array
                         let availableUnits = [{
@@ -1953,8 +2048,11 @@
                             });
                         }
 
-                        // Check if item exists with the SAME unit (Base Unit)
-                        const existing = this.cart.find(item => item.id === product.id && item.unit === baseUnit);
+                        // If serial, don't combine with existing (each SN is unique item in cart or specific entry)
+                        // Actually better to have them as separate lines in cart for clear SN tracking
+                        const existing = (trackingType === 'serial' || forceBypassMerge)
+                            ? null 
+                            : this.cart.find(item => item.id === product.id && item.unit === baseUnit);
 
                         if (existing) {
                             // Skip stock check for service products
@@ -1966,24 +2064,126 @@
                                 this.searchError = 'Stok tidak mencukupi';
                             }
                         } else {
-                            const initialQty = parseInt(this.searchQty) || 1;
+                            const initialQty = product.qty || parseInt(this.searchQty) || 1;
+                            const actualPrice = product.selling_price || price;
+                            
                             this.cart.push({
                                 id: product.id,
                                 sku: product.sku,
                                 name: product.name,
                                 product_type: productType,
-                                price: price,
+                                price: actualPrice,
                                 qty: initialQty,
-                                subtotal: price * initialQty,
+                                subtotal: actualPrice * initialQty,
                                 stock: stock,
-                                unit: baseUnit,
+                                unit: product.unit || baseUnit,
                                 available_units: availableUnits,
-                                conversion: 1, // Base unit conversion is 1
-                                showStockError: false // For tooltip
+                                conversion: product.conversion || 1, 
+                                showStockError: false,
+                                tracking_type: trackingType,
+                                is_serial: trackingType === 'serial', // D.1 & D.2: flag for UI lock
+                                serial_id: product.selected_serial ? product.selected_serial.id : null,
+                                serial_number: product.selected_serial ? product.selected_serial.serial_number : null
                             });
                         }
+                        
                         this.searchQty = 1; // Reset qty input
                         this.$refs.searchInput.focus();
+                    },
+
+                    async openSerialModal(product) {
+                        this.currentSerialProduct = product;
+                        this.selectedSerials = []; // Change to array
+                        this.snSearchQuery = '';
+                        this.availableSerials = [];
+                        this.showSerialModal = true;
+                        
+                        // Calculate how many SNs are needed (Qty * Conversion)
+                        const conversion = parseFloat(this.searchQtyConversion) || 1;
+                        const qty = parseInt(this.searchQty) || 1;
+                        this.requiredSerialsCount = Math.round(qty * conversion);
+
+                        try {
+                            const res = await fetch(`/pos/products/${product.id}/serials`);
+                            const data = await res.json();
+
+                            // Filter out SNs already in the cart for this product
+                            const usedSerialIds = this.cart
+                                .filter(item => item.id === product.id && item.serial_id)
+                                .map(item => item.serial_id);
+
+                            this.availableSerials = data.filter(sn => !usedSerialIds.includes(sn.id));
+                        } catch (e) {
+                            console.error('Failed to load serials:', e);
+                        }
+                    },
+
+                    get filteredSerials() {
+                        if (!this.snSearchQuery) return this.availableSerials;
+                        const query = this.snSearchQuery.toLowerCase();
+                        
+                        const filtered = this.availableSerials.filter(s => 
+                            s.serial_number.toLowerCase().includes(query)
+                        );
+
+                        // Auto-select if exactly one match and required count is not met
+                        if (filtered.length === 1 && filtered[0].serial_number.toLowerCase() === query) {
+                            const sn = filtered[0];
+                            if (!this.selectedSerials.find(s => s.id === sn.id)) {
+                                if (this.selectedSerials.length < this.requiredSerialsCount) {
+                                    this.selectedSerials.push(sn);
+                                    this.snSearchQuery = ''; // Clear search for next scan
+                                }
+                            }
+                        }
+
+                        return filtered;
+                    },
+
+                    selectSerial(sn) {
+                        const index = this.selectedSerials.findIndex(s => s.id === sn.id);
+                        if (index >= 0) {
+                            this.selectedSerials.splice(index, 1);
+                        } else {
+                            if (this.selectedSerials.length < this.requiredSerialsCount) {
+                                this.selectedSerials.push(sn);
+                            } else {
+                                // Maybe show toast: "Jumlah SN sudah mencukupi"
+                            }
+                        }
+                    },
+
+                    confirmSerialSelection() {
+                        if (this.selectedSerials.length === 0) return;
+                        if (this.selectedSerials.length !== this.requiredSerialsCount) {
+                            alert(`Harap pilih ${this.requiredSerialsCount} nomor seri.`);
+                            return;
+                        }
+                        
+                        // Option A: Expand into multiple single-qty lines
+                        // Calculate price per base unit
+                        const totalPrice = (parseInt(this.currentSerialProduct.selling_price) || 0);
+                        const pricePerBase = totalPrice / (this.currentSerialProduct.conversion || 1);
+
+                        this.selectedSerials.forEach(sn => {
+                            const productWithSerial = {
+                                ...this.currentSerialProduct,
+                                selling_price: pricePerBase,
+                                qty: 1,
+                                conversion: 1, // Reset to base unit
+                                selected_serial: sn
+                            };
+                            this.addToCart(productWithSerial, true); // true = force bypass merge
+                        });
+                        
+                        this.closeSerialModal();
+                    },
+
+                    closeSerialModal() {
+                        this.showSerialModal = false;
+                        this.currentSerialProduct = null;
+                        this.selectedSerials = [];
+                        this.requiredSerialsCount = 0;
                     },
 
                     changeUnit(index, unitName) {
@@ -2001,6 +2201,13 @@
 
                     incrementQty(index) {
                         const item = this.cart[index];
+
+                        // Jika izinkan stok minus, langsung tambah tanpa validasi
+                        if (this.allowNegativeStock || item.product_type === 'service') {
+                            item.qty++;
+                            this.updateSubtotal(index);
+                            return;
+                        }
 
                         // Validasi Stok dengan Conversion
                         const conversion = item.conversion || 1;
@@ -2031,20 +2238,23 @@
                             qty = 1;
                         }
 
-                        // Check against stock with conversion
-                        const conversion = item.conversion || 1;
-                        const qtyInBase = qty * conversion;
+                        // Jika izinkan stok minus atau produk jasa, tidak ada batas qty
+                        if (!this.allowNegativeStock && item.product_type !== 'service') {
+                            // Check against stock with conversion
+                            const conversion = item.conversion || 1;
+                            const qtyInBase = qty * conversion;
 
-                        if (qtyInBase > item.stock) {
-                            // Calculate max possible qty (floor)
-                            const maxQty = Math.floor(item.stock / conversion);
-                            qty = maxQty > 0 ? maxQty : 1; // Minimal 1 jika stock ada tapi < 1 unit (edge case)
+                            if (qtyInBase > item.stock) {
+                                // Calculate max possible qty (floor)
+                                const maxQty = Math.floor(item.stock / conversion);
+                                qty = maxQty > 0 ? maxQty : 1;
 
-                            // Show Tooltip
-                            item.showStockError = true;
-                            setTimeout(() => {
-                                item.showStockError = false;
-                            }, 2000);
+                                // Show Tooltip
+                                item.showStockError = true;
+                                setTimeout(() => {
+                                    item.showStockError = false;
+                                }, 2000);
+                            }
                         }
 
                         item.qty = qty;
@@ -2179,7 +2389,8 @@
                                     product_id: item.id,
                                     qty: parseInt(item.qty),
                                     price: parseInt(item.price),
-                                    unit_name: item.unit || 'pcs'
+                                    unit_name: item.unit || 'pcs',
+                                    serial_id: item.serial_id
                                 })),
                                 payment: {
                                     method: this.paymentMethod,
@@ -2288,6 +2499,13 @@
                         this.couponCode = '';
                         this.promotionDiscount = 0;
                         this.appliedPromotions = [];
+                        
+                        // Serial Resets
+                        this.showSerialModal = false;
+                        this.currentSerialProduct = null;
+                        this.snSearchQuery = '';
+                        this.selectedSerials = [];
+                        this.availableSerials = [];
 
                         // Complete Storage Clear and Broadcast
                         this.clearCartStorage();

@@ -7,7 +7,11 @@ use App\Models\StockMovement;
 use App\Models\StockReceiving;
 use App\Models\StockReceivingItem;
 use App\Models\AuditLog;
+use App\Models\ProductSerial;
+use App\Models\Setting;
+use App\Models\Purchase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Eloquent\Collection;
 use Exception;
 
 /**
@@ -112,12 +116,61 @@ class StockService
                     'cost_price' => $newCost,
                     'stock_before' => $oldStock,
                     'stock_after' => $newStock,
+                    'batch_id' => $item['batch_id'] ?? null,
+                    'product_serial_id' => $item['product_serial_id'] ?? null,
                     'notes' => "Penerimaan stok dari supplier",
                     'user_id' => $userId,
                 ]);
             }
 
             return $receiving->load('items');
+        });
+    }
+
+    /**
+     * Process stock record from a Purchase
+     * 
+     * @param \App\Models\Purchase $purchase
+     * @param array $items Data from controller
+     * @return void
+     */
+    public function recordPurchase($purchase, array $items)
+    {
+        return DB::transaction(function () use ($purchase, $items) {
+            foreach ($items as $itemData) {
+                $product = Product::findOrFail($itemData['product_id']);
+                
+                // 1. Update HPP (Weighted Average)
+                $oldStock = $product->stock_on_hand;
+                $oldCost = $product->cost_price;
+                $newCost = $this->calculateWeightedAverageCost(
+                    $oldStock, $oldCost, $itemData['qty'], $itemData['cost_per_unit']
+                );
+
+                // 2. Update Main Stock
+                $newStock = $oldStock + $itemData['qty'];
+                $product->update([
+                    'stock_on_hand' => $newStock,
+                    'cost_price' => $newCost
+                ]);
+
+                // 3. Stock Movement
+                StockMovement::create([
+                    'product_id' => $product->id,
+                    'movement_type' => 'IN',
+                    'reference_type' => 'PURCHASE',
+                    'reference_id' => $purchase->purchase_number,
+                    'qty' => $itemData['qty'],
+                    'unit_name' => $itemData['unit_name'],
+                    'cost_price' => $newCost,
+                    'stock_before' => $oldStock,
+                    'stock_after' => $newStock,
+                    'batch_id' => $itemData['batch_id'] ?? null,
+                    'product_serial_id' => $itemData['product_serial_id'] ?? null,
+                    'notes' => "Pembelian dari " . $purchase->supplier->name,
+                    'user_id' => auth()->id()
+                ]);
+            }
         });
     }
 
@@ -130,6 +183,7 @@ class StockService
      * @param string $referenceType (SALE, ADJUSTMENT, dll)
      * @param string $referenceId (Invoice number, dll)
      * @param int $userId
+     * @param array $options ['serial_id' => 1, 'batch_id' => 1] (optional)
      * @return void
      * @throws Exception
      */
@@ -140,7 +194,8 @@ class StockService
         string $referenceType,
         string $referenceId,
         int $userId,
-        ?string $notes = null
+        ?string $notes = null,
+        array $options = []
     ): void {
         $product = Product::findOrFail($productId);
 
@@ -153,28 +208,99 @@ class StockService
         $conversionRate = $product->getConversionRate($unitName);
         $qtyInBaseUnit = $qty * $conversionRate;
 
-        // Validate stock (in base unit)
-        if (!$product->hasStock($qtyInBaseUnit)) {
+        // Check system setting for negative stock
+        $allowNegative = \App\Models\Setting::get('allow_negative_stock', 'no') === 'yes';
+
+        // Validate stock (skip if negative allowed)
+        if (!$allowNegative && !$product->hasStock($qtyInBaseUnit)) {
             throw new Exception("Stok {$product->name} tidak mencukupi");
         }
 
         $oldStock = $product->stock_on_hand;
         $newStock = $oldStock - $qtyInBaseUnit;
 
-        // Update product stock
-        $product->update(['stock_on_hand' => $newStock]);
+        // --- Logic Tracking Tipe ---
+        
+        // 1. Serial Tracking (Elektronik)
+        if ($product->tracking_type === 'serial') {
+            $serialId = $options['serial_id'] ?? null;
+            if ($serialId) {
+                $serial = ProductSerial::find($serialId);
+                if ($serial && $serial->status === 'available') {
+                    $serial->update([
+                        'status' => 'sold',
+                        'sale_id' => $referenceId // Using invoice number as sale_id for now or link to Table ID
+                    ]);
+                    
+                    // Specific movement for this serial
+                    $this->createMovement($product, -$qty, $unitName, $newStock, $oldStock, $referenceType, $referenceId, $userId, $notes, null, $serial->id);
+                }
+            } else {
+                // If serial not provided but tracking is on, we might just deduct general stock 
+                // but ideally SN should be mandatory in POS UI.
+                $this->createMovement($product, -$qty, $unitName, $newStock, $oldStock, $referenceType, $referenceId, $userId, $notes);
+            }
+        } 
+        
+        // 2. Batch Tracking (Pharmacy/Bakery - FEFO)
+        else if ($product->tracking_type === 'batch') {
+            $remainingToDeduct = $qtyInBaseUnit;
+            
+            // Get batches ordered by expiry date (FEFO)
+            $batches = $product->batches()
+                ->where('current_quantity', '>', 0)
+                ->orderBy('expiry_date', 'asc')
+                ->get();
 
-        // Create stock movement
+            foreach ($batches as $batch) {
+                if ($remainingToDeduct <= 0) break;
+
+                $deductFromBatch = min($batch->current_quantity, $remainingToDeduct);
+                $batch->decrement('current_quantity', $deductFromBatch);
+                
+                // Record movement for this batch
+                // We use a fraction of the total qty for the movement if it's split, 
+                // but for simplicity we record it once or multiple times.
+                // Better record multiple if it spans batches to be accurate.
+                $this->createMovement($product, -($deductFromBatch / $conversionRate), $unitName, $newStock, $oldStock, $referenceType, $referenceId, $userId, $notes, $batch->id);
+                
+                $remainingToDeduct -= $deductFromBatch;
+            }
+
+            // If still remaining (negative stock case), deduct from general or dummy batch
+            if ($remainingToDeduct > 0 && $allowNegative) {
+                $this->createMovement($product, -($remainingToDeduct / $conversionRate), $unitName, $newStock, $oldStock, $referenceType, $referenceId, $userId, $notes . " (Negative Stock)");
+            }
+        }
+        
+        // 3. Default Tracking
+        else {
+            $this->createMovement($product, -$qty, $unitName, $newStock, $oldStock, $referenceType, $referenceId, $userId, $notes);
+        }
+
+        // Update main product stock
+        $product->update(['stock_on_hand' => $newStock]);
+    }
+
+    /**
+     * Helper to create stock movement
+     */
+    private function createMovement($product, $qty, $unitName, $newStock, $oldStock, $type, $refId, $userId, $notes, $batchId = null, $serialId = null)
+    {
+        $conversionRate = $product->getConversionRate($unitName);
+        
         StockMovement::create([
             'product_id' => $product->id,
             'movement_type' => 'OUT',
-            'reference_type' => $referenceType,
-            'reference_id' => $referenceId,
-            'qty' => -$qty, // Qty in transaction unit
+            'reference_type' => $type,
+            'reference_id' => $refId,
+            'qty' => $qty,
             'unit_name' => $unitName,
-            'cost_price' => $product->cost_price * $conversionRate, // Cost proportional to unit
+            'cost_price' => $product->cost_price * $conversionRate,
             'stock_before' => $oldStock,
             'stock_after' => $newStock,
+            'batch_id' => $batchId,
+            'product_serial_id' => $serialId,
             'notes' => $notes,
             'user_id' => $userId,
         ]);

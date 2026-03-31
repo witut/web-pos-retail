@@ -34,6 +34,8 @@ use Illuminate\Database\Eloquent\Model;
  * @property float $stock_before (Stok sebelum movement)
  * @property float $stock_after (Stok sesudah movement)
  * @property string|null $notes
+ * @property int|null $batch_id
+ * @property int|null $product_serial_id
  * @property int $user_id
  */
 class StockMovement extends Model
@@ -51,6 +53,8 @@ class StockMovement extends Model
         'stock_before',
         'stock_after',
         'notes',
+        'batch_id',
+        'product_serial_id',
         'user_id',
     ];
 
@@ -75,6 +79,22 @@ class StockMovement extends Model
     public function product()
     {
         return $this->belongsTo(Product::class);
+    }
+
+    /**
+     * Get batch terkait pergerakan ini
+     */
+    public function batch()
+    {
+        return $this->belongsTo(ProductBatch::class);
+    }
+
+    /**
+     * Get nomor seri terkait pergerakan ini
+     */
+    public function serial()
+    {
+        return $this->belongsTo(ProductSerial::class, 'product_serial_id');
     }
 
     /**

@@ -128,6 +128,10 @@
                 padding: 0;
                 margin: 0;
             }
+
+            .no-print {
+                display: none !important;
+            }
         }
     </style>
 </head>
@@ -159,7 +163,7 @@
             <td>Tanggal</td>
             <td>:</td>
             <td>{{ $transaction->created_at->format('d M Y H:i') }}</td>
-            <td>Kasir</td>
+            <td>Sales</td>
             <td>:</td>
             <td>{{ $transaction->cashier->name ?? '-' }}</td>
         </tr>
@@ -186,35 +190,59 @@
             </tr>
         </thead>
         <tbody>
-            @foreach($transaction->items as $index => $item)
-                @php
-                    $parts = explode('|PROMO: ', $item->product_name);
-                    $name = current(explode('|', $parts[0]));
-                    $promoName = count($parts) > 1 ? $parts[1] : null;
-                    
-                    $displayName = $item->product->name ?? $name;
-                @endphp
+            @php
+                $groupedItems = [];
+                foreach($transaction->items as $item) {
+                    $key = $item->product_id . '_' . $item->unit_price . '_' . $item->discount_amount;
+                    if (!isset($groupedItems[$key])) {
+                        $parts = explode('|PROMO: ', $item->product_name);
+                        $name = current(explode('|', $parts[0]));
+                        $promoName = count($parts) > 1 ? $parts[1] : null;
+                        
+                        $groupedItems[$key] = [
+                            'name' => $item->product->name ?? $name,
+                            'promoName' => $promoName,
+                            'qty' => 0,
+                            'unit_name' => $item->unit_name ?? 'pcs',
+                            'unit_price' => $item->unit_price,
+                            'discount_amount' => 0,
+                            'subtotal' => 0,
+                            'serials' => []
+                        ];
+                    }
+                    $groupedItems[$key]['qty'] += $item->qty;
+                    $groupedItems[$key]['subtotal'] += $item->subtotal;
+                    $groupedItems[$key]['discount_amount'] += $item->discount_amount;
+                    if ($item->serial?->serial_number) {
+                        $groupedItems[$key]['serials'][] = $item->serial->serial_number;
+                    }
+                }
+                $index = 1;
+            @endphp
+            @foreach($groupedItems as $g)
                 <tr>
-                    <td class="num">{{ $index + 1 }}</td>
+                    <td class="num">{{ $index++ }}</td>
                     <td>
-                        {{ $displayName }}
-                        @if($promoName)
-                            <br><small style="color: #666;">*** PROMO: {{ $promoName }} ***</small>
-                        @elseif($item->discount_amount > 0)
-                            <br><small style="color: #666;">Disc. {{ Str::limit($displayName, 10) }}</small>
+                        {{ $g['name'] }}
+                        @if($g['promoName'])
+                            <br><small style="color: #666;">*** PROMO: {{ $g['promoName'] }} ***</small>
+                        @elseif($g['discount_amount'] > 0)
+                            <br><small style="color: #666;">Disc. {{ \Illuminate\Support\Str::limit($g['name'], 20) }}</small>
+                        @endif
+                        
+                        @if(!empty($g['serials']))
+                            @foreach($g['serials'] as $sn)
+                                <br><small style="color: #555; padding-left: 5px;">&#x21B3; SN: {{ $sn }}</small>
+                            @endforeach
                         @endif
                     </td>
-                    <td class="qty">{{ number_format($item->qty, 0, ',', '.') }}</td>
-                    <td>{{ $item->unit_name ?? 'pcs' }}</td>
-                    <td class="price">{{ number_format($item->unit_price, 0, ',', '.') }}</td>
+                    <td class="qty">{{ number_format($g['qty'], 0, ',', '.') }}</td>
+                    <td>{{ $g['unit_name'] }}</td>
+                    <td class="price">{{ number_format($g['unit_price'], 0, ',', '.') }}</td>
                     <td class="discount">
-                        @if($item->discount_amount > 0)
-                            {{ number_format($item->discount_amount, 0, ',', '.') }}
-                        @else
-                            0
-                        @endif
+                        {{ $g['discount_amount'] > 0 ? number_format($g['discount_amount'], 0, ',', '.') : '0' }}
                     </td>
-                    <td class="subtotal">{{ number_format($item->subtotal, 0, ',', '.') }}</td>
+                    <td class="subtotal">{{ number_format($g['subtotal'], 0, ',', '.') }}</td>
                 </tr>
             @endforeach
         </tbody>
@@ -281,6 +309,7 @@
                 Penerima / Pembeli
             </td>
             <td>
+                {{ $transaction->cashier->name ?? '-' }}<br>
                 ( .................... )<br>
                 Hormat Kami
             </td>

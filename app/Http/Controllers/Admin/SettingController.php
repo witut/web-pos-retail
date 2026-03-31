@@ -29,6 +29,12 @@ class SettingController extends Controller
             'low_stock_threshold' => 10,
             'pin_attempt_limit' => 3,
             'pin_lockout_duration' => 15,
+            'allow_negative_stock' => '0',
+            // Product types enabled
+            'product_type_regular' => '1',
+            'product_type_batch' => '0',
+            'product_type_serial' => '0',
+            'product_type_service' => '0',
         ];
 
         // Merge defaults with database values
@@ -114,6 +120,13 @@ class SettingController extends Controller
             'backup_retention_days',
             'backup_email_notification',
             'backup_notification_email',
+
+            // Inventory
+            'allow_negative_stock',
+            'product_type_regular',
+            'product_type_batch',
+            'product_type_serial',
+            'product_type_service',
         ];
 
         // Track changes
@@ -169,7 +182,12 @@ class SettingController extends Controller
                     'customer.loyalty_enabled',
                     'customer.points_with_discount',
                     'discount.cashier_manual_allowed',
-                    'discount.allow_stacking'
+                    'discount.allow_stacking',
+                    'allow_negative_stock',
+                    'product_type_regular',
+                    'product_type_batch',
+                    'product_type_serial',
+                    'product_type_service',
                 ];
 
                 if (in_array($key, $checkboxKeys)) {

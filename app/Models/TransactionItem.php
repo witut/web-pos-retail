@@ -24,6 +24,8 @@ use Illuminate\Database\Eloquent\Model;
  * @property float $unit_price (Harga jual saat transaksi)
  * @property float $subtotal (qty × unit_price)
  * @property float $cost_price (HPP saat transaksi, untuk hitung profit)
+ * @property int|null $batch_id
+ * @property int|null $product_serial_id
  */
 class TransactionItem extends Model
 {
@@ -39,6 +41,8 @@ class TransactionItem extends Model
         'discount_amount',
         'subtotal',
         'cost_price',
+        'batch_id',
+        'product_serial_id',
     ];
 
     protected $casts = [
@@ -73,6 +77,22 @@ class TransactionItem extends Model
     public function product()
     {
         return $this->belongsTo(Product::class);
+    }
+
+    /**
+     * Get batch produk yang dijual
+     */
+    public function batch()
+    {
+        return $this->belongsTo(ProductBatch::class);
+    }
+
+    /**
+     * Get nomor seri produk yang dijual
+     */
+    public function serial()
+    {
+        return $this->belongsTo(ProductSerial::class, 'product_serial_id');
     }
 
     /**

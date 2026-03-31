@@ -30,6 +30,8 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
  * @property string $status (active, inactive)
  * @property string|null $image_path
  * @property float|null $tax_rate
+ * @property string $tracking_type (default, batch, serial)
+ * @property int $display_limit_days
  * @property int|null $created_by
  */
 class Product extends Model
@@ -51,6 +53,8 @@ class Product extends Model
         'status',
         'image_path',
         'tax_rate',
+        'tracking_type',
+        'display_limit_days',
         'created_by',
     ];
 
@@ -64,6 +68,7 @@ class Product extends Model
         'stock_on_hand' => 'decimal:2',
         'min_stock_alert' => 'decimal:2',
         'tax_rate' => 'decimal:2',
+        'display_limit_days' => 'integer',
     ];
 
     /*
@@ -137,6 +142,22 @@ class Product extends Model
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * Get semua batch stok untuk produk ini
+     */
+    public function batches()
+    {
+        return $this->hasMany(ProductBatch::class);
+    }
+
+    /**
+     * Get semua nomor seri untuk produk ini
+     */
+    public function serials()
+    {
+        return $this->hasMany(ProductSerial::class);
     }
 
     /**
@@ -331,6 +352,14 @@ class Product extends Model
      */
     public function hasStock(float $qty): bool
     {
+        // Check system setting for negative stock
+        // Value is stored as '1' (from checkbox input), not 'yes'
+        $allowNegative = \App\Models\Setting::get('allow_negative_stock', '0') == '1';
+        
+        if ($allowNegative) {
+            return true;
+        }
+
         return $this->stock_on_hand >= $qty;
     }
 

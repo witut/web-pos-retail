@@ -15,8 +15,7 @@
             font-family: 'Courier New', Courier, monospace;
             font-size: 11px;
             width:
-                {{ \App\Models\Setting::get('printer.paper_width', '80') }}
-                mm;
+                {{ \App\Models\Setting::get('printer.paper_width', '80') }}mm;
             padding: 5px;
             background: white;
             margin: 0 auto;
@@ -134,11 +133,11 @@
 
         @media print {
             body {
-                width: 80mm;
+                width: {{ \App\Models\Setting::get('printer.paper_width', '80') }}mm;
             }
 
             .no-print {
-                display: none;
+                display: none !important;
             }
         }
     </style>
@@ -192,34 +191,60 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach ($transaction->items as $item)
-                    @php
-                        $parts = explode('|PROMO: ', $item->product_name);
-                        $name = current(explode('|', $parts[0]));
-                        $promoName = count($parts) > 1 ? $parts[1] : null;
+                @php
+                    $groupedItems = [];
+                    foreach($transaction->items as $item) {
+                        $key = $item->product_id . '_' . $item->unit_price . '_' . $item->discount_amount;
+                        if (!isset($groupedItems[$key])) {
+                            $parts = explode('|PROMO: ', $item->product_name);
+                            $name = current(explode('|', $parts[0]));
+                            $promoName = count($parts) > 1 ? $parts[1] : null;
 
-                        $displayName = $item->product->name ?? $name;
-                    @endphp
+                            $groupedItems[$key] = [
+                                'name' => $item->product->name ?? $name,
+                                'promoName' => $promoName,
+                                'qty' => 0,
+                                'unit_name' => $item->unit_name ?? 'pcs',
+                                'unit_price' => $item->unit_price,
+                                'discount_amount' => 0,
+                                'subtotal' => 0,
+                                'serials' => []
+                            ];
+                        }
+                        $groupedItems[$key]['qty'] += $item->qty;
+                        $groupedItems[$key]['subtotal'] += $item->subtotal;
+                        $groupedItems[$key]['discount_amount'] += $item->discount_amount;
+                        if ($item->serial?->serial_number) {
+                            $groupedItems[$key]['serials'][] = $item->serial->serial_number;
+                        }
+                    }
+                @endphp
+                @foreach ($groupedItems as $g)
                     <tr>
                         <td class="product-name">
-                            {{ Str::limit($displayName, 15) }}
+                            {{ \Illuminate\Support\Str::limit($g['name'], 15) }}
+                            @if(!empty($g['serials']))
+                                @foreach($g['serials'] as $sn)
+                                    <br><small style="color: #666; font-size: 8px; padding-left: 2px;">&#x21B3; SN: {{ $sn }}</small>
+                                @endforeach
+                            @endif
                         </td>
-                        <td class="qty">{{ number_format($item->qty) }}</td>
-                        <td class="price">{{ number_format($item->unit_price) }}</td>
-                        <td class="subtotal">{{ number_format($item->subtotal + $item->discount_amount) }}</td>
+                        <td class="qty">{{ number_format($g['qty']) }}</td>
+                        <td class="price">{{ number_format($g['unit_price']) }}</td>
+                        <td class="subtotal">{{ number_format($g['subtotal'] + $g['discount_amount']) }}</td>
                         <!-- Gross Subtotal -->
                     </tr>
-                    @if($item->discount_amount > 0)
+                    @if($g['discount_amount'] > 0)
                         <tr>
                             <td colspan="3" style="text-align: right; font-size: 10px; color: #555;">
-                                @if($promoName)
-                                    *** PROMO: {{ Str::limit($promoName, 15) }} ***
+                                @if($g['promoName'])
+                                    *** PROMO: {{ \Illuminate\Support\Str::limit($g['promoName'], 15) }} ***
                                 @else
-                                    Disc. {{ Str::limit($displayName, 10) }}:
+                                    Disc. {{ \Illuminate\Support\Str::limit($g['name'], 10) }}:
                                 @endif
                             </td>
                             <td class="subtotal" style="font-size: 10px; color: #555;">
-                                -{{ number_format($item->discount_amount) }}</td>
+                                -{{ number_format($g['discount_amount']) }}</td>
                         </tr>
                     @endif
                 @endforeach

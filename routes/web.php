@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\ProductImportController;
 use App\Http\Controllers\Admin\SupplierController;
 use App\Http\Controllers\Admin\StockController;
+use App\Http\Controllers\Admin\PurchaseController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Cashier\POSController;
 use App\Http\Controllers\Cashier\ShiftController;
@@ -55,7 +56,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     // Suppliers CRUD
     Route::resource('suppliers', SupplierController::class);
 
-    // Stock Management
+    // Stock Management & Procurement
+    Route::resource('purchases', PurchaseController::class);
     Route::prefix('stock')->name('stock.')->group(function () {
         Route::get('/receiving', [StockController::class, 'receiving'])->name('receiving.index');
         Route::get('/receiving/create', [StockController::class, 'createReceiving'])->name('receiving.create');
@@ -156,8 +158,8 @@ Route::middleware(['auth', 'role:cashier,admin'])->group(function () {
 
         // Product/Customer Search (Safe to allow, needed for POS overlay background if we want it to look alive, though interaction is blocked)
         Route::get('/search-product', [POSController::class, 'searchProduct'])->name('search-product');
-        Route::get('/search-product', [POSController::class, 'searchProduct'])->name('search-product');
         Route::get('/autocomplete', [POSController::class, 'autocomplete'])->name('autocomplete');
+        Route::get('/products/{product}/serials', [POSController::class, 'getSerials'])->name('products.serials');
     });
 
     // --- Session History (Allowed without active session) ---

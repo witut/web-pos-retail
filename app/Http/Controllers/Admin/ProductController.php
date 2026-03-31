@@ -48,8 +48,14 @@ class ProductController extends Controller
     public function create()
     {
         $categories = Category::all();
+        $productTypeSettings = [
+            'regular' => \App\Models\Setting::get('product_type_regular', '1') == '1',
+            'batch'   => \App\Models\Setting::get('product_type_batch', '0') == '1',
+            'serial'  => \App\Models\Setting::get('product_type_serial', '0') == '1',
+            'service' => \App\Models\Setting::get('product_type_service', '0') == '1',
+        ];
 
-        return view('admin.products.create', compact('categories'));
+        return view('admin.products.create', compact('categories', 'productTypeSettings'));
     }
 
     /**
@@ -71,6 +77,8 @@ class ProductController extends Controller
             'min_stock_alert' => 'nullable|numeric|min:0',
             'tax_rate' => 'nullable|numeric|min:0|max:100',
             'status' => 'required|in:active,inactive',
+            'tracking_type' => 'required|in:default,batch,serial',
+            'display_limit_days' => 'nullable|integer|min:0',
             'description' => 'nullable|string',
             'image' => 'nullable|image|max:2048',
             'barcodes' => 'nullable|array',
@@ -165,7 +173,14 @@ class ProductController extends Controller
             })->values();
 
 
-        return view('admin.products.edit', compact('product', 'categories', 'barcodesData', 'unitsData'));
+        $productTypeSettings = [
+            'regular' => \App\Models\Setting::get('product_type_regular', '1') == '1',
+            'batch'   => \App\Models\Setting::get('product_type_batch', '0') == '1',
+            'serial'  => \App\Models\Setting::get('product_type_serial', '0') == '1',
+            'service' => \App\Models\Setting::get('product_type_service', '0') == '1',
+        ];
+
+        return view('admin.products.edit', compact('product', 'categories', 'barcodesData', 'unitsData', 'productTypeSettings'));
     }
 
     /**
@@ -185,6 +200,8 @@ class ProductController extends Controller
             'min_stock_alert' => 'nullable|numeric|min:0',
             'tax_rate' => 'nullable|numeric|min:0|max:100',
             'status' => 'required|in:active,inactive',
+            'tracking_type' => 'required|in:default,batch,serial',
+            'display_limit_days' => 'nullable|integer|min:0',
             'description' => 'nullable|string',
             'image' => 'nullable|image|max:2048',
             'barcodes' => 'nullable|array',

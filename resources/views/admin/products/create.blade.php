@@ -59,6 +59,7 @@
                                         class="w-4 h-4 text-slate-600 border-gray-300 focus:ring-slate-500">
                                     <span class="ml-2 text-sm text-gray-700">Inventory (Barang)</span>
                                 </label>
+                                @if($productTypeSettings['service'] ?? false)
                                 <label class="flex items-center cursor-pointer">
                                     <input type="radio" name="product_type" value="service"
                                         x-model="product_type"
@@ -66,6 +67,7 @@
                                         class="w-4 h-4 text-slate-600 border-gray-300 focus:ring-slate-500">
                                     <span class="ml-2 text-sm text-gray-700">Service (Jasa)</span>
                                 </label>
+                                @endif
                             </div>
                             <p class="text-xs text-gray-500 mt-1" x-show="product_type === 'service'">
                                 💡 Produk jasa tidak memiliki stok fisik dan tidak akan dikurangi saat transaksi
@@ -98,12 +100,56 @@
                                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                         </div>
 
+                        <!-- Tracking Type -->
+                        <div x-show="product_type !== 'service'" x-cloak>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Tipe Pelacakan <span class="text-red-500">*</span>
+                            </label>
+                            <select name="tracking_type" x-model="tracking_type" required
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                @if($productTypeSettings['regular'] ?? true)
+                                <option value="default">Sederhana (Stok Biasa)</option>
+                                @endif
+                                @if($productTypeSettings['batch'] ?? false)
+                                <option value="batch">Batch & Expired Date (Obat/Bakery)</option>
+                                @endif
+                                @if($productTypeSettings['serial'] ?? false)
+                                <option value="serial">Serial Number (Elektronik)</option>
+                                @endif
+                            </select>
+                            <p class="text-xs text-gray-500 mt-1">
+                                <span x-show="tracking_type === 'default'">Stok dihitung total tanpa nomor batch/seri.</span>
+                                <span x-show="tracking_type === 'batch'">Memungkinkan pelacakan nomor batch dan tanggal kadaluwarsa.</span>
+                                <span x-show="tracking_type === 'serial'">Tiap unit produk memiliki nomor seri unik.</span>
+                            </p>
+                            @php
+                                $activeTypes = collect($productTypeSettings ?? [])->filter()->count();
+                            @endphp
+                            @if($activeTypes < 4)
+                            <p class="text-xs text-blue-600 mt-1">💡 Opsi tipe pelacakan disesuaikan dengan profil toko. Ubah di <a href="{{ route('admin.settings.index') }}#inventory" class="underline">Pengaturan → Inventori</a>.</p>
+                            @endif
+                        </div>
+
+                        <!-- Display Limit (Pull-out) -->
+                        <div x-show="tracking_type === 'batch'" x-cloak>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Batas Pajang (Hari)
+                            </label>
+                            <div class="relative">
+                                <input type="number" name="display_limit_days" value="{{ old('display_limit_days', 0) }}"
+                                    min="0"
+                                    class="w-full px-4 py-2 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <span class="absolute right-3 top-2.5 text-gray-500 text-sm">Hari</span>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">Ditarik dari rak X hari sebelum kadaluwarsa (ED)</p>
+                        </div>
+
                         <!-- Status -->
-                        <div>
+                        <div :class="tracking_type !== 'batch' ? 'md:col-span-1' : ''">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
                             <select name="status"
                                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                                <option value="active" {{ old('status') == 'active' ? 'selected' : '' }}>Aktif</option>
+                                <option value="active" {{ old('status', 'active') == 'active' ? 'selected' : '' }}>Aktif</option>
                                 <option value="inactive" {{ old('status') == 'inactive' ? 'selected' : '' }}>Nonaktif
                                 </option>
                             </select>
@@ -435,9 +481,10 @@
                     barcodes: [],
                     units: [],
                     imagePreview: null,
-                    selling_price: '{{ old('selling_price') }}',
-                    cost_price: '{{ old('cost_price') }}',
+                    selling_price: '{{ old('selling_price', '') }}',
+                    cost_price: '{{ old('cost_price', '') }}',
                     margin_percent: 0,
+                    tracking_type: '{{ old('tracking_type', 'default') }}',
 
                     get formattedSellingPrice() {
                         return this.selling_price ? new Intl.NumberFormat('id-ID').format(this.selling_price) : '';

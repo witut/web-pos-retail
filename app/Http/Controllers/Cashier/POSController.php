@@ -82,6 +82,9 @@ class POSController extends Controller
         $shiftService = app(\App\Services\ShiftService::class);
         $session = $shiftService->getCurrentSession(auth()->user());
 
+        // Inventory settings
+        $allowNegativeStock = Setting::get('allow_negative_stock', '0') == '1';
+
         return view('cashier.pos.index', compact(
             'taxRate',
             'taxType',
@@ -90,7 +93,8 @@ class POSController extends Controller
             'cashierCanCreate',
             'pointsMinRedeem',
             'pointsMaxRedeemPercent',
-            'session'
+            'session',
+            'allowNegativeStock'
         ));
     }
 
@@ -117,12 +121,35 @@ class POSController extends Controller
             ->with(['barcodes', 'activeUnits', 'category'])
             ->first();
 
-        // If not found, search by SKU
+        // Jika tidak ditemukan di barcode, cari by SKU
         if (!$product) {
             $product = Product::active()
                 ->where('sku', $query)
                 ->with(['barcodes', 'activeUnits', 'category'])
                 ->first();
+        }
+
+        $matchedSerial = null;
+
+        // D.3: Jika masih tidak ditemukan, cari di tabel Serial Number (kondisi available)
+        if (!$product) {
+            $itemSerial = \App\Models\ProductSerial::where('serial_number', $query)
+                ->where('status', 'available')
+                ->first();
+                
+            if ($itemSerial) {
+                $product = Product::active()
+                    ->where('id', $itemSerial->product_id)
+                    ->with(['barcodes', 'activeUnits', 'category'])
+                    ->first();
+                    
+                if ($product) {
+                    $matchedSerial = [
+                        'id' => $itemSerial->id,
+                        'serial_number' => $itemSerial->serial_number
+                    ];
+                }
+            }
         }
 
         if (!$product) {
@@ -153,6 +180,8 @@ class POSController extends Controller
                 'stock_on_hand' => $product->stock_on_hand,
                 'base_unit' => $product->base_unit,
                 'image_url' => $product->getImageUrl(),
+                'tracking_type' => $product->tracking_type,
+                'matched_serial' => $matchedSerial, // D.3 send this up
                 'units' => $product->activeUnits->map(function ($unit) {
                     return [
                         'id' => $unit->id,
@@ -193,6 +222,7 @@ class POSController extends Controller
                     'price' => $product->selling_price,
                     'stock' => $product->stock_on_hand,
                     'base_unit' => $product->base_unit,
+                    'tracking_type' => $product->tracking_type,
                     'units' => $product->activeUnits->map(function ($unit) {
                         return [
                             'id' => $unit->id,
@@ -205,6 +235,22 @@ class POSController extends Controller
             });
 
         return response()->json($products);
+    }
+
+    /**
+     * Get available serial numbers for a product (AJAX)
+     * 
+     * @param Product $product
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getSerials(Product $product)
+    {
+        $serials = $product->serials()
+            ->available()
+            ->select('id', 'serial_number')
+            ->get();
+
+        return response()->json($serials);
     }
 
     /**
@@ -273,6 +319,7 @@ class POSController extends Controller
             'items.*.qty' => 'required|numeric|min:0.01',
             'items.*.price' => 'required|numeric|min:0',
             'items.*.unit_name' => 'required|string|max:20',
+            'items.*.serial_id' => 'nullable|exists:product_serials,id',
             'payment.method' => 'required|in:cash,card,qris,transfer',
             'payment.amount_paid' => 'required|numeric|min:0',
             'customer_id' => 'nullable|exists:customers,id',
@@ -288,6 +335,7 @@ class POSController extends Controller
                     'qty' => $item['qty'],
                     'price' => $item['price'],
                     'unit_name' => $item['unit_name'],
+                    'serial_id' => $item['serial_id'] ?? null,
                 ];
             })->toArray();
 
@@ -327,6 +375,7 @@ class POSController extends Controller
                     'unit_name' => $item['unit_name'],
                     'discount_amount' => $item['discount_amount'] ?? 0,
                     'promo_name' => $item['promo_name'] ?? null,
+                    'serial_id' => $item['serial_id'] ?? null,
                 ];
             }, $promoResult['items']);
 
